@@ -878,7 +878,7 @@ static void RegisterGlobalTable( lua_State *state )
 	LUA->SetField( -2, "SEEK_SET" );
 
 	LUA->PushNumber( FILESYSTEM_SEEK_CURRENT );
-	LUA->SetField( -2, "SEEK_CUR" );
+	LUA->SetField( -2, "SEEK_CURRENT" );
 
 	LUA->PushNumber( FILESYSTEM_SEEK_TAIL );
 	LUA->SetField( -2, "SEEK_END" );

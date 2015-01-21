@@ -3,10 +3,24 @@
 #include <interface.h>
 #include <filesystem.h>
 #include <strtools.h>
-#include <stdint.h>
+#include <cstdint>
+#include <cstdio>
 #include <string>
 #include <vector>
+#include <map>
 #include <algorithm>
+
+#if defined _WIN32
+
+#include <direct.h>
+
+#define rmdir _rmdir
+
+#elif defined __linux || defined __APPLE__
+
+#include <unistd.h>
+
+#endif
 
 inline int ThrowError( lua_State *state, const char *error )
 {
@@ -62,7 +76,7 @@ inline userdata *GetUserdata( lua_State *state, int index )
 
 inline FileHandle_t GetAndValidateFile( lua_State *state, int index, const char *err )
 {
-	FileHandle_t file = reinterpret_cast<FileHandle_t>( GetUserdata( state, index )->data );
+	FileHandle_t file = static_cast<FileHandle_t>( GetUserdata( state, index )->data );
 	if( file == nullptr )
 		ThrowError( state, err );
 
@@ -85,7 +99,7 @@ LUA_FUNCTION_STATIC( Close )
 
 	userdata *udata = GetUserdata( state, 1 );
 
-	FileHandle_t file = reinterpret_cast<FileHandle_t>( udata->data );
+	FileHandle_t file = static_cast<FileHandle_t>( udata->data );
 	if( file == nullptr )
 		return 0;
 
@@ -643,17 +657,51 @@ LUA_FUNCTION_STATIC( Open )
 		return 0;
 
 	FileHandle_t f = internal->Open( filename, options, pathid );
-	if( f != nullptr )
+	if( f == nullptr )
+		return 0;
+
+	GarrysMod::Lua::UserData *userdata = file::Create( state );
+
+	userdata->type = file::metatype;
+	userdata->data = f;
+
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( Exists )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+
+	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
+
+	if( !IsPathAllowed( filename, "r", pathid ) )
 	{
-		GarrysMod::Lua::UserData *userdata = file::Create( state );
-
-		userdata->type = file::metatype;
-		userdata->data = f;
-
+		LUA->PushBool( false );
 		return 1;
 	}
 
-	return 0;
+	LUA->PushBool( internal->FileExists( filename, pathid ) );
+
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( IsDirectory )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+
+	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
+
+	if( !IsPathAllowed( filename, "r", pathid ) )
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
+
+	LUA->PushBool( internal->IsDirectory( filename, pathid ) );
+
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( Rename )
@@ -664,10 +712,24 @@ LUA_FUNCTION_STATIC( Rename )
 
 	const char *filenameold = LUA->GetString( 1 ), *filenamenew = LUA->GetString( 2 ), *pathid = LUA->GetString( 3 );
 
-	if( IsPathAllowed( filenameold, "w", pathid ) && IsPathAllowed( filenamenew, "w", pathid ) )
-		LUA->PushBool( internal->RenameFile( filenameold, filenamenew ) );
-	else
+	if( !IsPathAllowed( filenameold, "w", pathid ) && !IsPathAllowed( filenamenew, "w", pathid ) )
+	{
 		LUA->PushBool( false );
+		return 1;
+	}
+
+	if( internal->IsDirectory( filenameold, pathid ) )
+	{
+		char fullpathold[1024] = { 0 };
+		internal->RelativePathToFullPath_safe( filenameold, pathid, fullpathold, FILTER_CULLPACK );
+		char fullpathnew[1024] = { 0 };
+		internal->RelativePathToFullPath_safe( filenamenew, pathid, fullpathnew, FILTER_CULLPACK );
+		LUA->PushBool( rename( fullpathold, fullpathnew ) == 0 );
+	}
+	else
+	{
+		LUA->PushBool( internal->RenameFile( filenameold, filenamenew, pathid ) );
+	}
 
 	return 1;
 }
@@ -680,11 +742,24 @@ LUA_FUNCTION_STATIC( Remove )
 	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
 
 	if( !IsPathAllowed( filename, "w", pathid ) )
-		return 0;
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
 
-	internal->RemoveFile( filename, pathid );
+	if( internal->IsDirectory( filename, pathid ) )
+	{
+		char fullpath[1024] = { 0 };
+		internal->RelativePathToFullPath( filename, pathid, fullpath, sizeof( fullpath ), FILTER_CULLPACK );
+		LUA->PushBool( rmdir( fullpath ) == 0 );
+	}
+	else if( internal->FileExists( filename, pathid ) )
+	{
+		internal->RemoveFile( filename, pathid );
+		LUA->PushBool( internal->FileExists( filename, pathid ) );
+	}
 
-	return 0;
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( MakeDirectory )
@@ -695,11 +770,45 @@ LUA_FUNCTION_STATIC( MakeDirectory )
 	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
 
 	if( !IsPathAllowed( filename, "w", pathid ) )
-		return 0;
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
 
 	internal->CreateDirHierarchy( filename, pathid );
+	LUA->PushBool( internal->IsDirectory( filename, pathid ) );
 
-	return 0;
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( Find )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+
+	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
+
+	LUA->CreateTable( );
+	LUA->CreateTable( );
+
+	if( !IsPathAllowed( filename, "r", pathid ) )
+		return 2;
+
+	size_t k = 0;
+	FileFindHandle_t handle = -1;
+	const char *path = internal->FindFirstEx( filename, pathid, &handle );
+	while( path != nullptr )
+	{
+		LUA->PushNumber( ++k );
+		LUA->PushString( path );
+		LUA->SetTable( internal->FindIsDirectory( handle ) ? -4 : -3 );
+
+		path = internal->FindNext( handle );
+	}
+
+	internal->FindClose( handle );
+
+	return 2;
 }
 
 LUA_FUNCTION_STATIC( GetSearchPaths )
@@ -709,22 +818,26 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 		pathid = LUA->GetString( 1 );
 
 	int maxlen = internal->GetSearchPath( pathid, true, nullptr, 0 );
-	std::string paths( maxlen, '\0' );
-	internal->GetSearchPath( pathid, true, &paths[0], maxlen );
 
 	LUA->CreateTable( );
 
-	size_t k = 1, start = 0, pos = paths.find( ';' );
-	for( ; pos != paths.npos; ++k, start = pos + 1, pos = paths.find( ';', start ) )
+	if( maxlen <= 0 )
+		return 1;
+
+	std::string paths( maxlen, '\0' );
+	internal->GetSearchPath( pathid, true, &paths[0], maxlen );
+
+	size_t k = 0, start = 0, pos = paths.find( ';' );
+	for( ; pos != paths.npos; start = pos + 1, pos = paths.find( ';', start ) )
 	{
 		paths[pos] = '\0';
 
-		LUA->PushNumber( k );
+		LUA->PushNumber( ++k );
 		LUA->PushString( &paths[start] );
 		LUA->SetTable( -3 );
 	}
 
-	LUA->PushNumber( k );
+	LUA->PushNumber( ++k );
 	LUA->PushString( &paths[start] );
 	LUA->SetTable( -3 );
 
@@ -740,6 +853,12 @@ static void RegisterGlobalTable( lua_State *state )
 	LUA->PushCFunction( Open );
 	LUA->SetField( -2, "Open" );
 
+	LUA->PushCFunction( Exists );
+	LUA->SetField( -2, "Exists" );
+
+	LUA->PushCFunction( IsDirectory );
+	LUA->SetField( -2, "IsDirectory" );
+
 	LUA->PushCFunction( Rename );
 	LUA->SetField( -2, "Rename" );
 
@@ -748,6 +867,9 @@ static void RegisterGlobalTable( lua_State *state )
 
 	LUA->PushCFunction( MakeDirectory );
 	LUA->SetField( -2, "MakeDirectory" );
+
+	LUA->PushCFunction( Find );
+	LUA->SetField( -2, "Find" );
 
 	LUA->PushCFunction( GetSearchPaths );
 	LUA->SetField( -2, "GetSearchPaths" );

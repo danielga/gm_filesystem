@@ -174,7 +174,7 @@ LUA_FUNCTION_STATIC( Seek )
 
 	double num = LUA->GetNumber( 2 );
 	if( num < -2147483648.0 || num > 2147483647.0 )
-		return ThrowError( state, "size out of bounds (must fit in a 32 bits integer)" );
+		return ThrowError( state, "size out of bounds (must fit in a 32 bits signed integer)" );
 
 	FileSystemSeek_t seektype = FILESYSTEM_SEEK_HEAD;
 	if( LUA->IsType( 3, GarrysMod::Lua::Type::NUMBER ) )
@@ -208,8 +208,8 @@ LUA_FUNCTION_STATIC( Read )
 	FileHandle_t file = GetAndValidateFile( state, 1, invalid_error );
 
 	double num = LUA->GetNumber( 2 );
-	if( num <= 0.0 || num > 2147483647.0 )
-		return ThrowError( state, "size out of bounds (must fit in a 32 bits integer and be bigger than 0)" );
+	if( num < 1.0 || num > 2147483647.0 )
+		return ThrowError( state, "size out of bounds (must fit in a 32 bits signed integer and be bigger than 0)" );
 
 	int len = static_cast<int>( num );
 	std::vector<char> buffer( len );
@@ -388,8 +388,8 @@ LUA_FUNCTION_STATIC( Write )
 	size_t len = 0;
 	const char *str = LUA->GetString( 2, &len );
 
-	if( len >= 2147483647 )
-		len = 2147483646;
+	if( len > 2147483647 )
+		len = 2147483647;
 
 	LUA->PushNumber( len != 0 ? filesystem::internal->Write( str, len, file ) : 0.0 );
 	return 1;

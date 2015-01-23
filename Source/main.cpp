@@ -6,8 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
-#include <vector>
-#include <map>
+#include <unordered_set>
 #include <algorithm>
 
 #if defined _WIN32
@@ -47,6 +46,8 @@ static CDllDemandLoader internal_loader( "filesystem_stdio.dylib" );
 
 static IFileSystem *internal = nullptr;
 
+static const char *vfs_path = "vfs";
+
 static void Initialize( lua_State *state )
 {
 	CreateInterfaceFn factory = internal_loader.GetFactory( );
@@ -56,6 +57,14 @@ static void Initialize( lua_State *state )
 	internal = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
 	if( internal == nullptr )
 		ThrowError( state, "IFileSystem not initialized. Critical error." );
+
+	internal->AddSearchPath( vfs_path, "GAME" );
+	internal->AddSearchPath( vfs_path, vfs_path );
+}
+
+static void Deinitialize( lua_State *state )
+{
+	internal->RemoveSearchPaths( vfs_path );
 }
 
 }
@@ -580,7 +589,7 @@ static void RegisterMetaTable( lua_State *state )
 namespace filesystem
 {
 
-static const std::vector<std::string> whitelist_pathid_read = {
+static const std::unordered_set<std::string> whitelist_pathid_read = {
 	"data",
 	"download",
 	"lua",
@@ -591,14 +600,58 @@ static const std::vector<std::string> whitelist_pathid_read = {
 	"mod"
 };
 
-static const std::vector<std::string> whitelist_pathid_write = {
+static const std::unordered_set<std::string> whitelist_pathid_write = {
 	"data",
 	"download"
 };
 
-static const std::vector<std::string> whitelist_extensions = {
+static const std::unordered_set<std::string> whitelist_extensions = {
+	// garry's mod
+	"lua",
+	"gma",
+	"cache",
+	
+	// data
 	"txt",
-	"dat"
+	"dat",
+
+	// valve
+	"nav",
+	"ain",
+	"vpk",
+	"vtf",
+	"vmt",
+	"mdl",
+	"vtx",
+	"phy",
+	"vvd",
+	"pcf",
+	"bsp",
+
+	// image
+	"tga",
+	"jpg",
+	"png",
+
+	// audio
+	"wav",
+	"mp3",
+
+	// video
+	"mp4",
+	"ogg",
+	"avi",
+	"mkv",
+
+	// fonts
+	"ttf",
+	"ttc",
+
+	// assorted
+	"tmp",
+	"md",
+	"db",
+	"inf"
 };
 
 static bool IsPathAllowed( std::string filename, std::string options, std::string pathid )
@@ -608,16 +661,8 @@ static bool IsPathAllowed( std::string filename, std::string options, std::strin
 
 	bool wantswrite = options.find_first_of( "wa+" ) != options.npos;
 
-	bool valid = false;
-	const std::vector<std::string> &whitelist = wantswrite ? whitelist_pathid_write : whitelist_pathid_read;
-	for( auto it = whitelist.begin( ); it != whitelist.end( ); ++it )
-		if( pathid == *it )
-		{
-			valid = true;
-			break;
-		}
-
-	if( !valid )
+	const std::unordered_set<std::string> &whitelist = wantswrite ? whitelist_pathid_write : whitelist_pathid_read;
+	if( whitelist.find( pathid ) == whitelist.end( ) )
 		return false;
 
 	if( !V_RemoveDotSlashes( &filename[0], CORRECT_PATH_SEPARATOR, true ) )
@@ -626,20 +671,8 @@ static bool IsPathAllowed( std::string filename, std::string options, std::strin
 	if( wantswrite )
 	{
 		const char *extension = V_GetFileExtension( filename.c_str( ) );
-		if( extension != nullptr )
-		{
-			valid = false;
-			std::string ext = extension;
-			for( auto it = whitelist_extensions.begin( ); it != whitelist_extensions.end( ); ++it )
-				if( ext == *it )
-				{
-					valid = true;
-					break;
-				}
-
-			if( !valid )
-				return false;
-		}
+		if( extension != nullptr && whitelist_extensions.find( extension ) == whitelist_extensions.end( ) )
+			return false;
 	}
 
 	return true;
@@ -901,6 +934,7 @@ GMOD_MODULE_OPEN( )
 
 GMOD_MODULE_CLOSE( )
 {
-	(void)state;
+	filesystem::Deinitialize( state );
+
 	return 0;
 }

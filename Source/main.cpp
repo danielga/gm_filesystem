@@ -1,5 +1,4 @@
 #include <GarrysMod/Lua/Interface.h>
-#include <GarrysMod/Lua/LuaInterface.h>
 #include <interface.h>
 #include <filesystem.h>
 #include <strtools.h>
@@ -529,6 +528,8 @@ static void RegisterMetaTable( lua_State *state )
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "__gc" );
 
+	LUA->CreateTable( );
+
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "Close" );
 
@@ -582,6 +583,8 @@ static void RegisterMetaTable( lua_State *state )
 
 	LUA->PushCFunction( WriteDouble );
 	LUA->SetField( -2, "WriteDouble" );
+
+	LUA->SetField( -2, "__index" );
 }
 
 }
@@ -737,6 +740,24 @@ LUA_FUNCTION_STATIC( IsDirectory )
 	return 1;
 }
 
+LUA_FUNCTION_STATIC( GetTime )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+
+	const char *filename = LUA->GetString( 1 ), *pathid = LUA->GetString( 2 );
+
+	if( !IsPathAllowed( filename, "r", pathid ) )
+	{
+		LUA->PushNumber( -1 );
+		return 1;
+	}
+
+	LUA->PushNumber( internal->GetPathTime( filename, pathid ) );
+
+	return 1;
+}
+
 LUA_FUNCTION_STATIC( Rename )
 {
 	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
@@ -877,6 +898,15 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	return 1;
 }
 
+LUA_FUNCTION_STATIC( MountSteamContent )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::NUMBER );
+
+	LUA->PushBool( internal->MountSteamContent( static_cast<int>( LUA->GetNumber( 1 ) ) ) == FILESYSTEM_MOUNT_OK );
+
+	return 1;
+}
+
 static void RegisterGlobalTable( lua_State *state )
 {
 	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_GLOB );
@@ -892,6 +922,9 @@ static void RegisterGlobalTable( lua_State *state )
 	LUA->PushCFunction( IsDirectory );
 	LUA->SetField( -2, "IsDirectory" );
 
+	LUA->PushCFunction( GetTime );
+	LUA->SetField( -2, "GetTime" );
+
 	LUA->PushCFunction( Rename );
 	LUA->SetField( -2, "Rename" );
 
@@ -906,6 +939,9 @@ static void RegisterGlobalTable( lua_State *state )
 
 	LUA->PushCFunction( GetSearchPaths );
 	LUA->SetField( -2, "GetSearchPaths" );
+
+	LUA->PushCFunction( MountSteamContent );
+	LUA->SetField( -2, "MountSteamContent" );
 
 	LUA->PushNumber( FILESYSTEM_SEEK_HEAD );
 	LUA->SetField( -2, "SEEK_SET" );

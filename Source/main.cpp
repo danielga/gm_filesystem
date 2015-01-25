@@ -20,12 +20,6 @@
 
 #endif
 
-inline int ThrowError( lua_State *state, const char *error )
-{
-	LUA->ThrowError( error );
-	return 0;
-}
-
 namespace filesystem
 {
 
@@ -51,11 +45,11 @@ static void Initialize( lua_State *state )
 {
 	CreateInterfaceFn factory = internal_loader.GetFactory( );
 	if( factory == nullptr )
-		ThrowError( state, "Couldn't get filesystem_stdio factory. Critical error." );
+		LUA->ThrowError( "Couldn't get filesystem_stdio factory. Critical error." );
 
 	internal = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
 	if( internal == nullptr )
-		ThrowError( state, "IFileSystem not initialized. Critical error." );
+		LUA->ThrowError( "IFileSystem not initialized. Critical error." );
 
 	internal->AddSearchPath( vfs_path, "GAME" );
 	internal->AddSearchPath( vfs_path, vfs_path );
@@ -86,7 +80,7 @@ inline FileHandle_t GetAndValidateFile( lua_State *state, int index, const char 
 {
 	FileHandle_t file = static_cast<FileHandle_t>( GetUserdata( state, index )->data );
 	if( file == nullptr )
-		ThrowError( state, err );
+		LUA->ThrowError( err );
 
 	return file;
 }
@@ -182,7 +176,7 @@ LUA_FUNCTION_STATIC( Seek )
 
 	double num = LUA->GetNumber( 2 );
 	if( num < -2147483648.0 || num > 2147483647.0 )
-		return ThrowError( state, "size out of bounds (must fit in a 32 bits signed integer)" );
+		LUA->ThrowError( "size out of bounds (must fit in a 32 bits signed integer)" );
 
 	FileSystemSeek_t seektype = FILESYSTEM_SEEK_HEAD;
 	if( LUA->IsType( 3, GarrysMod::Lua::Type::NUMBER ) )
@@ -217,7 +211,7 @@ LUA_FUNCTION_STATIC( Read )
 
 	double num = LUA->GetNumber( 2 );
 	if( num < 1.0 || num > 2147483647.0 )
-		return ThrowError( state, "size out of bounds (must fit in a 32 bits signed integer and be bigger than 0)" );
+		LUA->ThrowError( "size out of bounds (must fit in a 32 bits signed integer and be bigger than 0)" );
 
 	int len = static_cast<int>( num );
 	std::vector<char> buffer( len );
@@ -287,7 +281,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 		}
 
 		default:
-			return ThrowError( state, "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
+			LUA->ThrowError( "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
 	}
 
 	return 1;
@@ -348,7 +342,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 		}
 
 		default:
-			return ThrowError( state, "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
+			LUA->ThrowError( "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
 	}
 
 	return 0;
@@ -443,7 +437,7 @@ LUA_FUNCTION_STATIC( WriteInt )
 		}
 
 		default:
-			return ThrowError( state, "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
+			LUA->ThrowError( "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
 	}
 
 	return 1;
@@ -489,7 +483,7 @@ LUA_FUNCTION_STATIC( WriteUInt )
 		}
 
 		default:
-			return ThrowError( state, "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
+			LUA->ThrowError( "number of bits requested is not supported (must be 8, 16, 32 or 64)" );
 	}
 
 	return 0;

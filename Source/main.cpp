@@ -73,7 +73,7 @@ typedef GarrysMod::Lua::UserData userdata;
 
 inline userdata *GetUserdata( lua_State *state, int index )
 {
-	return static_cast<file::userdata *>( LUA->GetUserdata( index ) );
+	return static_cast<userdata *>( LUA->GetUserdata( index ) );
 }
 
 inline FileHandle_t GetAndValidateFile( lua_State *state, int index, const char *err )
@@ -85,14 +85,41 @@ inline FileHandle_t GetAndValidateFile( lua_State *state, int index, const char 
 	return file;
 }
 
-static GarrysMod::Lua::UserData *Create( lua_State *state )
+static userdata *Create( lua_State *state )
 {
 	userdata *udata = static_cast<userdata *>( LUA->NewUserdata( sizeof( userdata ) ) );
+	udata->type = metatype;
 
-	LUA->CreateMetaTableType( file::metaname, file::metatype );
+	LUA->CreateMetaTableType( metaname, metatype );
 	LUA->SetMetaTable( -2 );
 
 	return udata;
+}
+
+LUA_FUNCTION_STATIC( __tostring )
+{
+	LUA->CheckType( 1, metatype );
+
+	FileHandle_t file = GetAndValidateFile( state, 1, invalid_error );
+
+	char formatted[30] = { 0 };
+	V_snprintf( formatted, sizeof( formatted ), "%s: %p", metaname, file );
+	LUA->PushString( formatted );
+
+	return 0;
+}
+
+LUA_FUNCTION_STATIC( __eq )
+{
+	LUA->CheckType( 1, metatype );
+	LUA->CheckType( 2, metatype );
+
+	FileHandle_t file1 = GetAndValidateFile( state, 1, invalid_error );
+	FileHandle_t file2 = GetAndValidateFile( state, 2, invalid_error );
+
+	LUA->PushBool( file1 == file2 );
+
+	return 0;
 }
 
 LUA_FUNCTION_STATIC( Close )
@@ -519,6 +546,12 @@ static void RegisterMetaTable( lua_State *state )
 {
 	LUA->CreateMetaTableType( metaname, metatype );
 
+	LUA->PushCFunction( __tostring );
+	LUA->SetField( -2, "__tostring" );
+
+	LUA->PushCFunction( __eq );
+	LUA->SetField( -2, "__eq" );
+
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "__gc" );
 
@@ -690,10 +723,7 @@ LUA_FUNCTION_STATIC( Open )
 	if( f == nullptr )
 		return 0;
 
-	GarrysMod::Lua::UserData *userdata = file::Create( state );
-
-	userdata->type = file::metatype;
-	userdata->data = f;
+	file::Create( state )->data = f;
 
 	return 1;
 }

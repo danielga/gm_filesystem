@@ -96,7 +96,7 @@ static userdata *Create( lua_State *state )
 	return udata;
 }
 
-LUA_FUNCTION_STATIC( __tostring )
+LUA_FUNCTION_STATIC( tostring )
 {
 	LUA->CheckType( 1, metatype );
 
@@ -109,7 +109,7 @@ LUA_FUNCTION_STATIC( __tostring )
 	return 0;
 }
 
-LUA_FUNCTION_STATIC( __eq )
+LUA_FUNCTION_STATIC( eq )
 {
 	LUA->CheckType( 1, metatype );
 	LUA->CheckType( 2, metatype );
@@ -546,16 +546,14 @@ static void RegisterMetaTable( lua_State *state )
 {
 	LUA->CreateMetaTableType( metaname, metatype );
 
-	LUA->PushCFunction( __tostring );
+	LUA->PushCFunction( tostring );
 	LUA->SetField( -2, "__tostring" );
 
-	LUA->PushCFunction( __eq );
+	LUA->PushCFunction( eq );
 	LUA->SetField( -2, "__eq" );
 
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "__gc" );
-
-	LUA->CreateTable( );
 
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "Close" );
@@ -611,6 +609,7 @@ static void RegisterMetaTable( lua_State *state )
 	LUA->PushCFunction( WriteDouble );
 	LUA->SetField( -2, "WriteDouble" );
 
+	LUA->Push( -1 );
 	LUA->SetField( -2, "__index" );
 }
 

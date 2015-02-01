@@ -1,12 +1,12 @@
 #include <GarrysMod/Lua/Interface.h>
-#include <interface.h>
-#include <filesystem.h>
-#include <strtools.h>
 #include <cstdint>
 #include <cstdio>
 #include <string>
 #include <unordered_set>
 #include <algorithm>
+#include <interface.h>
+#include <filesystem.h>
+#include <strtools.h>
 
 #if defined _WIN32
 

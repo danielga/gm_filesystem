@@ -72,7 +72,8 @@ static CDllDemandLoader factory_loader( "filesystem_stdio.dylib" );
 #endif
 
 static IFileSystem *filesystem = nullptr;
-static const char *vfs_path = "vfs";
+static const char *vfs_pathid = "VFS";
+static const char *vfs_path = "garrymod" CORRECT_PATH_SEPARATOR_S "vfs";
 
 static void Initialize( lua_State *state )
 {
@@ -85,7 +86,7 @@ static void Initialize( lua_State *state )
 		symfinder.ResolveOnBinary( dedicated_lib, FileSystemFactory_sym, FileSystemFactory_symlen )
 	);
 	if( factory == nullptr )
-		LUA->ThrowError( "nable to retrieve dedicated factory" );
+		LUA->ThrowError( "unable to retrieve dedicated factory" );
 
 	filesystem = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
 	if( filesystem == nullptr )
@@ -104,13 +105,13 @@ static void Initialize( lua_State *state )
 #endif
 
 	filesystem->AddSearchPath( vfs_path, "GAME" );
-	filesystem->AddSearchPath( vfs_path, vfs_path );
+	filesystem->AddSearchPath( vfs_path, vfs_pathid );
 }
 
 static void Deinitialize( lua_State *state )
 {
 	filesystem->RemoveSearchPath( vfs_path, "GAME" );
-	filesystem->RemoveSearchPaths( vfs_path );
+	filesystem->RemoveSearchPaths( vfs_pathid );
 }
 
 }

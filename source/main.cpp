@@ -162,13 +162,13 @@ static FileHandle_t *Create( lua_State *state )
 LUA_FUNCTION_STATIC( tostring )
 {
 	lua_pushfstring( state, "%s: %p", metaname, Get( state, 1 ) );
-	return 0;
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( eq )
 {
 	LUA->PushBool( Get( state, 1 ) == Get( state, 2 ) );
-	return 0;
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( index )

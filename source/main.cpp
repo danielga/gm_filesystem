@@ -8,7 +8,12 @@
 #include <interface.h>
 #include <filesystem.h>
 #include <strtools.h>
+
+#if defined FILESYSTEM_SERVER
+
 #include <symbolfinder.hpp>
+
+#endif
 
 #if defined _WIN32
 

@@ -30,7 +30,7 @@ inline int32_t rmdir( const char *path )
 
 #endif
 
-namespace Global
+namespace global
 {
 
 #if defined FILESYSTEM_SERVER
@@ -121,7 +121,7 @@ static void Deinitialize( lua_State *state )
 
 }
 
-namespace FileHandle
+namespace filehandle
 {
 
 static const char *metaname = "FileHandle_t";
@@ -210,7 +210,7 @@ LUA_FUNCTION_STATIC( Close )
 	if( file == nullptr )
 		return 0;
 
-	Global::filesystem->Close( file );
+	global::filesystem->Close( file );
 	udata->file = nullptr;
 	return 0;
 }
@@ -224,25 +224,25 @@ LUA_FUNCTION_STATIC( IsValid )
 
 LUA_FUNCTION_STATIC( EndOfFile )
 {
-	LUA->PushBool( Global::filesystem->EndOfFile( Get( state, 1 ) ) );
+	LUA->PushBool( global::filesystem->EndOfFile( Get( state, 1 ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( OK )
 {
-	LUA->PushBool( Global::filesystem->IsOk( Get( state, 1 ) ) );
+	LUA->PushBool( global::filesystem->IsOk( Get( state, 1 ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( Size )
 {
-	LUA->PushNumber( Global::filesystem->Size( Get( state, 1 ) ) );
+	LUA->PushNumber( global::filesystem->Size( Get( state, 1 ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( Tell )
 {
-	LUA->PushNumber( Global::filesystem->Tell( Get( state, 1 ) ) );
+	LUA->PushNumber( global::filesystem->Tell( Get( state, 1 ) ) );
 	return 1;
 }
 
@@ -263,13 +263,13 @@ LUA_FUNCTION_STATIC( Seek )
 			seektype = static_cast<FileSystemSeek_t>( num );
 	}
 
-	Global::filesystem->Seek( file, static_cast<int32_t>( pos ), seektype );
+	global::filesystem->Seek( file, static_cast<int32_t>( pos ), seektype );
 	return 0;
 }
 
 LUA_FUNCTION_STATIC( Flush )
 {
-	Global::filesystem->Flush( Get( state, 1 ) );
+	global::filesystem->Flush( Get( state, 1 ) );
 	return 0;
 }
 
@@ -284,13 +284,36 @@ LUA_FUNCTION_STATIC( Read )
 
 	std::vector<char> buffer( static_cast<int32_t>( len ) );
 
-	int32_t read = Global::filesystem->Read( buffer.data( ), buffer.size( ), file );
+	int32_t read = global::filesystem->Read( buffer.data( ), buffer.size( ), file );
 	if( read > 0 )
 	{
 		LUA->PushString( buffer.data( ), read );
 		return 1;
 	}
 
+	return 0;
+}
+
+LUA_FUNCTION_STATIC( ReadString )
+{
+	FileHandle_t file = Get( state, 1 );
+
+	uint32_t pos = global::filesystem->Tell( file );
+
+	char c = '\0';
+	std::string buffer;
+	while( !global::filesystem->EndOfFile( file ) && global::filesystem->Read( &c, 1, file ) == 1 )
+	{
+		if( c == '\0' )
+		{
+			LUA->PushString( buffer.c_str( ) );
+			return 1;
+		}
+
+		buffer += c;
+	}
+
+	global::filesystem->Seek( file, pos, FILESYSTEM_SEEK_HEAD );
 	return 0;
 }
 
@@ -304,44 +327,44 @@ LUA_FUNCTION_STATIC( ReadInt )
 	{
 		case 8:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( int8_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( int8_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			int8_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 16:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( int16_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( int16_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			int16_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 32:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( int32_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( int32_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			int32_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 64:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( int64_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( int64_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			int64_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
@@ -363,44 +386,44 @@ LUA_FUNCTION_STATIC( ReadUInt )
 	{
 		case 8:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( uint8_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( uint8_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			uint8_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 16:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( uint16_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( uint16_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			uint16_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 32:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( uint32_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( uint32_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			uint32_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
 
 		case 64:
 		{
-			if( Global::filesystem->Tell( file ) + sizeof( uint64_t ) >= Global::filesystem->Size( file ) )
+			if( global::filesystem->Tell( file ) + sizeof( uint64_t ) >= global::filesystem->Size( file ) )
 				return 0;
 
 			uint64_t num = 0;
-			Global::filesystem->Read( &num, sizeof( num ), file );
+			global::filesystem->Read( &num, sizeof( num ), file );
 			LUA->PushNumber( num );
 			break;
 		}
@@ -409,18 +432,18 @@ LUA_FUNCTION_STATIC( ReadUInt )
 			LUA->ArgError( 2, "number of bits requested is not supported, must be 8, 16, 32 or 64" );
 	}
 
-	return 0;
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( ReadFloat )
 {
 	FileHandle_t file = Get( state, 1 );
 
-	if( Global::filesystem->Tell( file ) + sizeof( float ) >= Global::filesystem->Size( file ) )
+	if( global::filesystem->Tell( file ) + sizeof( float ) >= global::filesystem->Size( file ) )
 		return 0;
 
 	float num = 0.0f;
-	Global::filesystem->Read( &num, sizeof( num ), file );
+	global::filesystem->Read( &num, sizeof( num ), file );
 	LUA->PushNumber( num );
 	return 1;
 }
@@ -429,11 +452,11 @@ LUA_FUNCTION_STATIC( ReadDouble )
 {
 	FileHandle_t file = Get( state, 1 );
 
-	if( Global::filesystem->Tell( file ) + sizeof( double ) >= Global::filesystem->Size( file ) )
+	if( global::filesystem->Tell( file ) + sizeof( double ) >= global::filesystem->Size( file ) )
 		return 0;
 
 	double num = 0.0;
-	Global::filesystem->Read( &num, sizeof( num ), file );
+	global::filesystem->Read( &num, sizeof( num ), file );
 	LUA->PushNumber( num );
 	return 1;
 }
@@ -449,7 +472,29 @@ LUA_FUNCTION_STATIC( Write )
 	if( len > 2147483647 )
 		len = 2147483647;
 
-	LUA->PushNumber( len != 0 ? Global::filesystem->Write( str, len, file ) : 0.0 );
+	LUA->PushNumber( len != 0 ? global::filesystem->Write( str, len, file ) : 0.0 );
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( WriteString )
+{
+	FileHandle_t file = Get( state, 1 );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+
+	size_t len = 0;
+	const char *str = LUA->GetString( 2, &len );
+
+	if( len > 2147483647 )
+		len = 2147483647;
+
+	char z = '\0';
+	if( len != 0 )
+		LUA->PushNumber(
+			global::filesystem->Write( str, len, file ) + global::filesystem->Write( &z, 1, file )
+		);
+	else
+		LUA->PushNumber( 0.0 );
+
 	return 1;
 }
 
@@ -465,28 +510,28 @@ LUA_FUNCTION_STATIC( WriteInt )
 		case 8:
 		{
 			int8_t num = static_cast<int8_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 16:
 		{
 			int16_t num = static_cast<int16_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 32:
 		{
 			int32_t num = static_cast<int32_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 64:
 		{
 			int64_t num = static_cast<int64_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
@@ -509,28 +554,28 @@ LUA_FUNCTION_STATIC( WriteUInt )
 		case 8:
 		{
 			uint8_t num = static_cast<uint8_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 16:
 		{
 			uint16_t num = static_cast<uint16_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 32:
 		{
 			uint32_t num = static_cast<uint32_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 64:
 		{
 			uint64_t num = static_cast<uint64_t>( LUA->GetNumber( 2 ) );
-			LUA->PushBool( Global::filesystem->Write( &num, sizeof( num ), file ) == bits );
+			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
@@ -538,7 +583,7 @@ LUA_FUNCTION_STATIC( WriteUInt )
 			LUA->ArgError( 3, "number of bits requested is not supported, must be 8, 16, 32 or 64" );
 	}
 
-	return 0;
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( WriteFloat )
@@ -547,8 +592,8 @@ LUA_FUNCTION_STATIC( WriteFloat )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	float num = static_cast<float>( LUA->GetNumber( 2 ) );
-	Global::filesystem->Write( &num, sizeof( num ), file );
-	return 0;
+	LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == sizeof( num ) );
+	return 1;
 }
 
 LUA_FUNCTION_STATIC( WriteDouble )
@@ -557,8 +602,8 @@ LUA_FUNCTION_STATIC( WriteDouble )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	double num = LUA->GetNumber( 2 );
-	Global::filesystem->Write( &num, sizeof( num ), file );
-	return 0;
+	LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == sizeof( num ) );
+	return 1;
 }
 
 static void Initialize( lua_State *state )
@@ -601,6 +646,9 @@ static void Initialize( lua_State *state )
 	LUA->PushCFunction( Read );
 	LUA->SetField( -2, "Read" );
 
+	LUA->PushCFunction( ReadString );
+	LUA->SetField( -2, "ReadString" );
+
 	LUA->PushCFunction( ReadInt );
 	LUA->SetField( -2, "ReadInt" );
 
@@ -615,6 +663,9 @@ static void Initialize( lua_State *state )
 
 	LUA->PushCFunction( Write );
 	LUA->SetField( -2, "Write" );
+
+	LUA->PushCFunction( WriteString );
+	LUA->SetField( -2, "WriteString" );
 
 	LUA->PushCFunction( WriteInt );
 	LUA->SetField( -2, "WriteInt" );
@@ -646,7 +697,7 @@ static void Deinitialize( lua_State *state )
 
 }
 
-namespace FileSystem
+namespace filesystem
 {
 
 static bool IsPathAllowed( std::string &filename, bool write )
@@ -718,11 +769,11 @@ LUA_FUNCTION_STATIC( Open )
 	if( !IsPathAllowed( filename, write ) || !IsPathIDAllowed( pathid, write ) )
 		return 0;
 
-	FileHandle_t f = Global::filesystem->Open( filename.c_str( ), options.c_str( ), pathid.c_str( ) );
+	FileHandle_t f = global::filesystem->Open( filename.c_str( ), options.c_str( ), pathid.c_str( ) );
 	if( f == nullptr )
 		return 0;
 
-	*FileHandle::Create( state ) = f;
+	*filehandle::Create( state ) = f;
 	return 1;
 }
 
@@ -739,7 +790,7 @@ LUA_FUNCTION_STATIC( Exists )
 		return 1;
 	}
 
-	LUA->PushBool( Global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) );
+	LUA->PushBool( global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) );
 	return 1;
 }
 
@@ -756,7 +807,7 @@ LUA_FUNCTION_STATIC( IsDirectory )
 		return 1;
 	}
 
-	LUA->PushBool( Global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) );
+	LUA->PushBool( global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) );
 	return 1;
 }
 
@@ -773,7 +824,7 @@ LUA_FUNCTION_STATIC( GetTime )
 		return 1;
 	}
 
-	LUA->PushNumber( Global::filesystem->GetPathTime( filename.c_str( ), pathid.c_str( ) ) );
+	LUA->PushNumber( global::filesystem->GetPathTime( filename.c_str( ), pathid.c_str( ) ) );
 	return 1;
 }
 
@@ -791,17 +842,17 @@ LUA_FUNCTION_STATIC( Rename )
 		return 1;
 	}
 
-	if( Global::filesystem->IsDirectory( fname.c_str( ), pathid.c_str( ) ) )
+	if( global::filesystem->IsDirectory( fname.c_str( ), pathid.c_str( ) ) )
 	{
 		char fullpathold[1024] = { 0 };
-		Global::filesystem->RelativePathToFullPath_safe( fname.c_str( ), pathid.c_str( ), fullpathold );
+		global::filesystem->RelativePathToFullPath_safe( fname.c_str( ), pathid.c_str( ), fullpathold );
 		char fullpathnew[1024] = { 0 };
-		Global::filesystem->RelativePathToFullPath_safe( fnew.c_str( ), pathid.c_str( ), fullpathnew );
+		global::filesystem->RelativePathToFullPath_safe( fnew.c_str( ), pathid.c_str( ), fullpathnew );
 		LUA->PushBool( rename( fullpathold, fullpathnew ) == 0 );
 	}
 	else
 	{
-		LUA->PushBool( Global::filesystem->RenameFile( fname.c_str( ), fnew.c_str( ), pathid.c_str( ) ) );
+		LUA->PushBool( global::filesystem->RenameFile( fname.c_str( ), fnew.c_str( ), pathid.c_str( ) ) );
 	}
 
 	return 1;
@@ -820,16 +871,16 @@ LUA_FUNCTION_STATIC( Remove )
 		return 1;
 	}
 
-	if( Global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) )
+	if( global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) )
 	{
 		char fullpath[1024] = { 0 };
-		Global::filesystem->RelativePathToFullPath( filename.c_str( ), pathid.c_str( ), fullpath, sizeof( fullpath ) );
+		global::filesystem->RelativePathToFullPath( filename.c_str( ), pathid.c_str( ), fullpath, sizeof( fullpath ) );
 		LUA->PushBool( rmdir( fullpath ) == 0 );
 	}
-	else if( Global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) )
+	else if( global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) )
 	{
-		Global::filesystem->RemoveFile( filename.c_str( ), pathid.c_str( ) );
-		LUA->PushBool( Global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) );
+		global::filesystem->RemoveFile( filename.c_str( ), pathid.c_str( ) );
+		LUA->PushBool( global::filesystem->FileExists( filename.c_str( ), pathid.c_str( ) ) );
 	}
 
 	return 1;
@@ -848,8 +899,8 @@ LUA_FUNCTION_STATIC( MakeDirectory )
 		return 1;
 	}
 
-	Global::filesystem->CreateDirHierarchy( filename.c_str( ), pathid.c_str( ) );
-	LUA->PushBool( Global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) );
+	global::filesystem->CreateDirHierarchy( filename.c_str( ), pathid.c_str( ) );
+	LUA->PushBool( global::filesystem->IsDirectory( filename.c_str( ), pathid.c_str( ) ) );
 	return 1;
 }
 
@@ -868,18 +919,18 @@ LUA_FUNCTION_STATIC( Find )
 
 	size_t files = 0, dirs = 0;
 	FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
-	const char *path = Global::filesystem->FindFirstEx( filename.c_str( ), pathid.c_str( ), &handle );
+	const char *path = global::filesystem->FindFirstEx( filename.c_str( ), pathid.c_str( ), &handle );
 	while( path != nullptr )
 	{
-		bool isdir = Global::filesystem->FindIsDirectory( handle );
+		bool isdir = global::filesystem->FindIsDirectory( handle );
 		LUA->PushNumber( isdir ? ++dirs : ++files );
 		LUA->PushString( path );
 		LUA->SetTable( isdir ? -3 : -4 );
 
-		path = Global::filesystem->FindNext( handle );
+		path = global::filesystem->FindNext( handle );
 	}
 
-	Global::filesystem->FindClose( handle );
+	global::filesystem->FindClose( handle );
 	return 2;
 }
 
@@ -889,7 +940,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	if( LUA->IsType( 1, GarrysMod::Lua::Type::STRING ) )
 		pathid = LUA->GetString( 1 );
 
-	int32_t maxlen = Global::filesystem->GetSearchPath( pathid, true, nullptr, 0 );
+	int32_t maxlen = global::filesystem->GetSearchPath( pathid, true, nullptr, 0 );
 
 	LUA->CreateTable( );
 
@@ -897,7 +948,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 		return 1;
 
 	std::string paths( maxlen, '\0' );
-	Global::filesystem->GetSearchPath( pathid, true, &paths[0], maxlen );
+	global::filesystem->GetSearchPath( pathid, true, &paths[0], maxlen );
 
 	size_t k = 0, start = 0, pos = paths.find( ';' );
 	for( ; pos != paths.npos; start = pos + 1, pos = paths.find( ';', start ) )
@@ -918,7 +969,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 LUA_FUNCTION_STATIC( MountSteamContent )
 {
 	LUA->CheckType( 1, GarrysMod::Lua::Type::NUMBER );
-	LUA->PushBool( Global::filesystem->MountSteamContent(
+	LUA->PushBool( global::filesystem->MountSteamContent(
 		static_cast<int32_t>( LUA->GetNumber( 1 ) )
 	) == FILESYSTEM_MOUNT_OK );
 	return 1;
@@ -964,7 +1015,7 @@ static void Initialize( lua_State *state )
 	LUA->SetField( -2, "SEEK_SET" );
 
 	LUA->PushNumber( FILESYSTEM_SEEK_CURRENT );
-	LUA->SetField( -2, "SEEK_CURRENT" );
+	LUA->SetField( -2, "SEEK_CUR" );
 
 	LUA->PushNumber( FILESYSTEM_SEEK_TAIL );
 	LUA->SetField( -2, "SEEK_END" );
@@ -988,16 +1039,16 @@ static void Deinitialize( lua_State *state )
 
 GMOD_MODULE_OPEN( )
 {
-	Global::Initialize( state );
-	FileHandle::Initialize( state );
-	FileSystem::Initialize( state );
+	global::Initialize( state );
+	filehandle::Initialize( state );
+	filesystem::Initialize( state );
 	return 0;
 }
 
 GMOD_MODULE_CLOSE( )
 {
-	FileSystem::Deinitialize( state );
-	FileHandle::Deinitialize( state );
-	Global::Deinitialize( state );
+	filesystem::Deinitialize( state );
+	filehandle::Deinitialize( state );
+	global::Deinitialize( state );
 	return 0;
 }

@@ -1,4 +1,5 @@
 #include <GarrysMod/Lua/Interface.h>
+#include <interfaces.hpp>
 #include <lua.hpp>
 #include <cstdint>
 #include <cstdio>
@@ -35,23 +36,19 @@ namespace global
 
 #if defined FILESYSTEM_SERVER
 
-#if defined _WIN32
+static std::string dedicated_binary = "dedicated.dll";
 
-static const char *dedicated_lib = "dedicated.dll";
+#if defined _WIN32
 
 static const char *FileSystemFactory_sym = "\x55\x8B\xEC\x56\x8B\x75\x08\x68\x2A\x2A\x2A\x2A\x56\xE8";
 static const size_t FileSystemFactory_symlen = 14;
 
 #elif defined __linux
 
-static const char *dedicated_lib = "dedicated_srv.so";
-
 static const char *FileSystemFactory_sym = "@_Z17FileSystemFactoryPKcPi";
 static const size_t FileSystemFactory_symlen = 0;
 
 #elif defined __APPLE__
-
-static const char *dedicated_lib = "dedicated.dylib";
 
 static const char *FileSystemFactory_sym = "@__Z17FileSystemFactoryPKcPi";
 static const size_t FileSystemFactory_symlen = 0;
@@ -60,19 +57,7 @@ static const size_t FileSystemFactory_symlen = 0;
 
 #elif defined FILESYSTEM_CLIENT
 
-#if defined _WIN32
-
-static CDllDemandLoader factory_loader( "FileSystem_Stdio.dll" );
-
-#elif defined __linux
-
-static CDllDemandLoader factory_loader( "filesystem_stdio.so" );
-
-#elif defined __APPLE__
-
-static CDllDemandLoader factory_loader( "filesystem_stdio.dylib" );
-
-#endif
+static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio", false, false );
 
 #endif
 
@@ -87,9 +72,9 @@ static void Initialize( lua_State *state )
 
 	SymbolFinder symfinder;
 
-	CreateInterfaceFn factory = static_cast<CreateInterfaceFn>(
-		symfinder.ResolveOnBinary( dedicated_lib, FileSystemFactory_sym, FileSystemFactory_symlen )
-	);
+	CreateInterfaceFn factory = static_cast<CreateInterfaceFn>( symfinder.ResolveOnBinary(
+		dedicated_binary.c_str( ), FileSystemFactory_sym, FileSystemFactory_symlen
+	) );
 	if( factory == nullptr )
 		LUA->ThrowError( "unable to retrieve dedicated factory" );
 
@@ -99,16 +84,13 @@ static void Initialize( lua_State *state )
 
 #elif defined FILESYSTEM_CLIENT
 
-	CreateInterfaceFn factory = factory_loader.GetFactory( );
-	if( factory == nullptr )
-		LUA->ThrowError( "unable to retrieve engine factory" );
-
-	filesystem = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
+	filesystem = filesystem_loader.GetInterface<IFileSystem>( FILESYSTEM_INTERFACE_VERSION );
 	if( filesystem == nullptr )
-		LUA->ThrowError( "failed to initialize IFileSystem" );
+		LUA->ThrowError( "unable to initialize IFileSystem" );
 
 #endif
 
+	filesystem->CreateDirHierarchy( vfs_path );
 	filesystem->AddSearchPath( vfs_path, "GAME" );
 	filesystem->AddSearchPath( vfs_path, vfs_pathid );
 }

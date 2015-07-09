@@ -63,7 +63,8 @@ static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio", false, fa
 
 static IFileSystem *filesystem = nullptr;
 static const char *vfs_pathid = "VFS";
-static const char *vfs_path = "garrymod" CORRECT_PATH_SEPARATOR_S "vfs";
+static const char *vfs_dir = "vfs";
+static const char *vfs_path = "garrysmod" CORRECT_PATH_SEPARATOR_S "vfs";
 
 static void Initialize( lua_State *state )
 {
@@ -90,7 +91,7 @@ static void Initialize( lua_State *state )
 
 #endif
 
-	filesystem->CreateDirHierarchy( vfs_path );
+	filesystem->CreateDirHierarchy( vfs_dir );
 	filesystem->AddSearchPath( vfs_path, "GAME" );
 	filesystem->AddSearchPath( vfs_path, vfs_pathid );
 }

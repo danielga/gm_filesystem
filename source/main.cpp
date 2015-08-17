@@ -115,6 +115,7 @@ struct UserData
 {
 	FileHandle_t file;
 	uint8_t type;
+	bool invert;
 };
 
 inline void CheckType( lua_State *state, int32_t index )
@@ -123,28 +124,44 @@ inline void CheckType( lua_State *state, int32_t index )
 		luaL_typerror( state, index, metaname );
 }
 
-static FileHandle_t Get( lua_State *state, int32_t index )
+static FileHandle_t Get( lua_State *state, int32_t index, bool *invert = nullptr )
 {
 	CheckType( state, index );
-	FileHandle_t file = static_cast<UserData *>( LUA->GetUserdata( index ) )->file;
+	UserData *udata = static_cast<UserData *>( LUA->GetUserdata( index ) );
+	FileHandle_t file = udata->file;
 	if( file == nullptr )
 		LUA->ArgError( index, invalid_error );
+
+	if( invert != nullptr )
+		*invert = udata->invert;
 
 	return file;
 }
 
-static FileHandle_t *Create( lua_State *state )
+static void Create( lua_State *state, FileHandle_t file )
 {
 	UserData *udata = static_cast<UserData *>( LUA->NewUserdata( sizeof( UserData ) ) );
+	udata->file = file;
 	udata->type = metatype;
+	udata->invert = false;
 
 	LUA->CreateMetaTableType( metaname, metatype );
 	LUA->SetMetaTable( -2 );
 
 	LUA->CreateTable( );
 	lua_setfenv( state, -2 );
+}
 
-	return &udata->file;
+template<class Type> inline Type InvertBytes( Type data, bool invert )
+{
+	if( invert )
+	{
+		uint8_t *start = reinterpret_cast<uint8_t *>( &data ), *end = start + sizeof( Type ) - 1;
+		for( size_t k = 0; k < sizeof( Type ) / 2; ++k )
+			*start++ = *end--;
+	}
+
+	return data;
 }
 
 LUA_FUNCTION_STATIC( tostring )
@@ -256,6 +273,14 @@ LUA_FUNCTION_STATIC( Flush )
 	return 0;
 }
 
+LUA_FUNCTION_STATIC( InvertBytes )
+{
+	CheckType( state, 1 );
+	LUA->CheckType( 1, GarrysMod::Lua::Type::BOOL );
+	static_cast<UserData *>( LUA->GetUserdata( 1 ) )->invert = LUA->GetBool( 2 );
+	return 0;
+}
+
 LUA_FUNCTION_STATIC( Read )
 {
 	FileHandle_t file = Get( state, 1 );
@@ -302,7 +327,8 @@ LUA_FUNCTION_STATIC( ReadString )
 
 LUA_FUNCTION_STATIC( ReadInt )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	int32_t bits = static_cast<int32_t>( LUA->GetNumber( 2 ) );
@@ -326,7 +352,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 			int16_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -337,7 +363,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 			int32_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -348,7 +374,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 			int64_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -361,7 +387,8 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 LUA_FUNCTION_STATIC( ReadUInt )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	int32_t bits = static_cast<int32_t>( LUA->GetNumber( 2 ) );
@@ -385,7 +412,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 			uint16_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -396,7 +423,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 			uint32_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -407,7 +434,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 			uint64_t num = 0;
 			global::filesystem->Read( &num, sizeof( num ), file );
-			LUA->PushNumber( num );
+			LUA->PushNumber( InvertBytes( num, invert ) );
 			break;
 		}
 
@@ -420,27 +447,29 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 LUA_FUNCTION_STATIC( ReadFloat )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 
 	if( global::filesystem->Tell( file ) + sizeof( float ) >= global::filesystem->Size( file ) )
 		return 0;
 
 	float num = 0.0f;
 	global::filesystem->Read( &num, sizeof( num ), file );
-	LUA->PushNumber( num );
+	LUA->PushNumber( InvertBytes( num, invert ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( ReadDouble )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 
 	if( global::filesystem->Tell( file ) + sizeof( double ) >= global::filesystem->Size( file ) )
 		return 0;
 
 	double num = 0.0;
 	global::filesystem->Read( &num, sizeof( num ), file );
-	LUA->PushNumber( num );
+	LUA->PushNumber( InvertBytes( num, invert ) );
 	return 1;
 }
 
@@ -483,7 +512,8 @@ LUA_FUNCTION_STATIC( WriteString )
 
 LUA_FUNCTION_STATIC( WriteInt )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
 
@@ -499,21 +529,21 @@ LUA_FUNCTION_STATIC( WriteInt )
 
 		case 16:
 		{
-			int16_t num = static_cast<int16_t>( LUA->GetNumber( 2 ) );
+			int16_t num = InvertBytes( static_cast<int16_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 32:
 		{
-			int32_t num = static_cast<int32_t>( LUA->GetNumber( 2 ) );
+			int32_t num = InvertBytes( static_cast<int32_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 64:
 		{
-			int64_t num = static_cast<int64_t>( LUA->GetNumber( 2 ) );
+			int64_t num = InvertBytes( static_cast<int64_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
@@ -527,7 +557,8 @@ LUA_FUNCTION_STATIC( WriteInt )
 
 LUA_FUNCTION_STATIC( WriteUInt )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
 
@@ -543,21 +574,21 @@ LUA_FUNCTION_STATIC( WriteUInt )
 
 		case 16:
 		{
-			uint16_t num = static_cast<uint16_t>( LUA->GetNumber( 2 ) );
+			uint16_t num = InvertBytes( static_cast<uint16_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 32:
 		{
-			uint32_t num = static_cast<uint32_t>( LUA->GetNumber( 2 ) );
+			uint32_t num = InvertBytes( static_cast<uint32_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
 
 		case 64:
 		{
-			uint64_t num = static_cast<uint64_t>( LUA->GetNumber( 2 ) );
+			uint64_t num = InvertBytes( static_cast<uint64_t>( LUA->GetNumber( 2 ) ), invert );
 			LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == bits );
 			break;
 		}
@@ -571,20 +602,22 @@ LUA_FUNCTION_STATIC( WriteUInt )
 
 LUA_FUNCTION_STATIC( WriteFloat )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
-	float num = static_cast<float>( LUA->GetNumber( 2 ) );
+	float num = InvertBytes( static_cast<float>( LUA->GetNumber( 2 ) ), invert );
 	LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == sizeof( num ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( WriteDouble )
 {
-	FileHandle_t file = Get( state, 1 );
+	bool invert = false;
+	FileHandle_t file = Get( state, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
-	double num = LUA->GetNumber( 2 );
+	double num = InvertBytes( LUA->GetNumber( 2 ), invert );
 	LUA->PushBool( global::filesystem->Write( &num, sizeof( num ), file ) == sizeof( num ) );
 	return 1;
 }
@@ -598,6 +631,12 @@ static void Initialize( lua_State *state )
 
 	LUA->PushCFunction( eq );
 	LUA->SetField( -2, "__eq" );
+
+	LUA->PushCFunction( index );
+	LUA->SetField( -2, "__index" );
+
+	LUA->PushCFunction( newindex );
+	LUA->SetField( -2, "__newindex" );
 
 	LUA->PushCFunction( Close );
 	LUA->SetField( -2, "__gc" );
@@ -625,6 +664,9 @@ static void Initialize( lua_State *state )
 
 	LUA->PushCFunction( Flush );
 	LUA->SetField( -2, "Flush" );
+
+	LUA->PushCFunction( InvertBytes );
+	LUA->SetField( -2, "InvertBytes" );
 
 	LUA->PushCFunction( Read );
 	LUA->SetField( -2, "Read" );
@@ -662,20 +704,13 @@ static void Initialize( lua_State *state )
 	LUA->PushCFunction( WriteDouble );
 	LUA->SetField( -2, "WriteDouble" );
 
-	LUA->Push( -1 );
-	LUA->SetField( -2, "__index" );
-
 	LUA->Pop( 1 );
 }
 
 static void Deinitialize( lua_State *state )
 {
-	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_REG );
-
 	LUA->PushNil( );
-	LUA->SetField( -2, metaname );
-
-	LUA->Pop( 1 );
+	LUA->SetField( GarrysMod::Lua::INDEX_REGISTRY, metaname );
 }
 
 }
@@ -756,7 +791,7 @@ LUA_FUNCTION_STATIC( Open )
 	if( f == nullptr )
 		return 0;
 
-	*filehandle::Create( state ) = f;
+	filehandle::Create( state, f );
 	return 1;
 }
 
@@ -958,11 +993,23 @@ LUA_FUNCTION_STATIC( MountSteamContent )
 	return 1;
 }
 
+LUA_FUNCTION_STATIC( IsLittleEndian )
+{
+	uint32_t test = 1;
+	LUA->PushNumber( *reinterpret_cast<uint8_t *>( &test ) == 1 );
+	return 1;
+}
+
 static void Initialize( lua_State *state )
 {
-	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_GLOB );
-
 	LUA->CreateTable( );
+
+	LUA->PushString( "filesystem 1.0.0" );
+	LUA->SetField( -2, "Version" );
+
+	// version num follows LuaJIT style, xxyyzz
+	LUA->PushNumber( 10000 );
+	LUA->SetField( -2, "VersionNum" );
 
 	LUA->PushCFunction( Open );
 	LUA->SetField( -2, "Open" );
@@ -994,6 +1041,9 @@ static void Initialize( lua_State *state )
 	LUA->PushCFunction( MountSteamContent );
 	LUA->SetField( -2, "MountSteamContent" );
 
+	LUA->PushCFunction( IsLittleEndian );
+	LUA->SetField( -2, "IsLittleEndian" );
+
 	LUA->PushNumber( FILESYSTEM_SEEK_HEAD );
 	LUA->SetField( -2, "SEEK_SET" );
 
@@ -1003,19 +1053,13 @@ static void Initialize( lua_State *state )
 	LUA->PushNumber( FILESYSTEM_SEEK_TAIL );
 	LUA->SetField( -2, "SEEK_END" );
 
-	LUA->SetField( -2, "filesystem" );
-
-	LUA->Pop( 1 );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "filesystem" );
 }
 
 static void Deinitialize( lua_State *state )
 {
-	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_GLOB );
-
 	LUA->PushNil( );
-	LUA->SetField( -2, "filesystem" );
-
-	LUA->Pop( 1 );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "filesystem" );
 }
 
 };

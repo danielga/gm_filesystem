@@ -27,6 +27,8 @@ inline int32_t rmdir( const char *path )
 namespace filesystem
 {
 
+static const size_t max_searchpath_len = 8192;
+
 static bool IsPathAllowed( std::string &filepath, bool write )
 {
 	if( !V_RemoveDotSlashes( &filepath[0], CORRECT_PATH_SEPARATOR, true ) )
@@ -136,7 +138,6 @@ LUA_FUNCTION_STATIC( Exists )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	std::string filename = LUA->GetString( 1 ), pathid = LUA->GetString( 2 );
-
 	if( !IsPathAllowed( filename, false ) || !IsPathIDAllowed( pathid, false ) )
 	{
 		LUA->PushBool( false );
@@ -153,7 +154,6 @@ LUA_FUNCTION_STATIC( IsDirectory )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	std::string filename = LUA->GetString( 1 ), pathid = LUA->GetString( 2 );
-
 	if( !IsPathAllowed( filename, false ) || !IsPathIDAllowed( pathid, false ) )
 	{
 		LUA->PushBool( false );
@@ -170,7 +170,6 @@ LUA_FUNCTION_STATIC( GetTime )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	std::string filename = LUA->GetString( 1 ), pathid = LUA->GetString( 2 );
-
 	if( !IsPathAllowed( filename, false ) || !IsPathIDAllowed( pathid, false ) )
 	{
 		LUA->PushNumber( -1 );
@@ -188,7 +187,6 @@ LUA_FUNCTION_STATIC( Rename )
 	LUA->CheckType( 3, GarrysMod::Lua::Type::STRING );
 
 	std::string fname = LUA->GetString( 1 ), fnew = LUA->GetString( 2 ), pathid = LUA->GetString( 3 );
-
 	if( !IsPathAllowed( fname, true ) || !IsPathAllowed( fnew, true ) || !IsPathIDAllowed( pathid, true ) )
 	{
 		LUA->PushBool( false );
@@ -217,7 +215,6 @@ LUA_FUNCTION_STATIC( Remove )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	std::string filename = LUA->GetString( 1 ), pathid = LUA->GetString( 2 );
-
 	if( !IsPathAllowed( filename, true ) || !IsPathIDAllowed( pathid, true ) )
 	{
 		LUA->PushBool( false );
@@ -245,7 +242,6 @@ LUA_FUNCTION_STATIC( MakeDirectory )
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	std::string filename = LUA->GetString( 1 ), pathid = LUA->GetString( 2 );
-
 	if( !IsPathAllowed( filename, true ) || !IsPathIDAllowed( pathid, true ) )
 	{
 		LUA->PushBool( false );
@@ -293,38 +289,64 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	if( LUA->IsType( 1, GarrysMod::Lua::Type::STRING ) )
 		pathid = LUA->GetString( 1 );
 
-	int32_t maxlen = global::filesystem->GetSearchPath( pathid, true, nullptr, 0 );
-
 	LUA->CreateTable( );
 
-	if( maxlen <= 0 )
+	std::vector<char> paths( max_searchpath_len, '\0' );
+	int32_t len = global::filesystem->GetSearchPath( pathid, true, &paths[0], paths.size( ) );
+	if( len <= 0 )
 		return 1;
 
-	std::string paths( maxlen, '\0' );
-	global::filesystem->GetSearchPath( pathid, true, &paths[0], maxlen );
+	paths.resize( len );
 
-	size_t k = 0, start = 0, pos = paths.find( ';' );
-	for( ; pos != paths.npos; start = pos + 1, pos = paths.find( ';', start ) )
+	size_t k = 0;
+	std::vector<char>::iterator start = paths.begin( ), end = paths.end( ), pos = std::find( start, end, ';' );
+	for( ; pos != end; start = ++pos, pos = std::find( start, end, ';' ) )
 	{
-		paths[pos] = '\0';
+		*pos = '\0';
 
 		LUA->PushNumber( ++k );
-		LUA->PushString( &paths[start] );
+		LUA->PushString( &start[0] );
 		LUA->SetTable( -3 );
 	}
 
-	LUA->PushNumber( ++k );
-	LUA->PushString( &paths[start] );
-	LUA->SetTable( -3 );
+	if( start != end )
+	{
+		LUA->PushNumber( ++k );
+		LUA->PushString( &start[0] );
+		LUA->SetTable( -3 );
+	}
+
 	return 1;
 }
 
-LUA_FUNCTION_STATIC( MountSteamContent )
+LUA_FUNCTION_STATIC( AddSearchPath )
 {
-	LUA->CheckType( 1, GarrysMod::Lua::Type::NUMBER );
-	LUA->PushBool( global::filesystem->MountSteamContent(
-		static_cast<int32_t>( LUA->GetNumber( 1 ) )
-	) == FILESYSTEM_MOUNT_OK );
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+
+	std::string directory = LUA->GetString( 1 );
+	if( !IsPathAllowed( directory, false ) )
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
+
+	global::filesystem->AddSearchPath( directory.c_str( ), "GAME" );
+	LUA->PushBool( true );
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( RemoveSearchPath )
+{
+	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
+
+	std::string directory = LUA->GetString( 1 );
+	if( !IsPathAllowed( directory, false ) )
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
+
+	LUA->PushBool( global::filesystem->RemoveSearchPath( directory.c_str( ), "GAME" ) );
 	return 1;
 }
 
@@ -339,11 +361,11 @@ void Initialize( lua_State *state )
 {
 	LUA->CreateTable( );
 
-	LUA->PushString( "filesystem 1.0.1" );
+	LUA->PushString( "filesystem 1.1.0" );
 	LUA->SetField( -2, "Version" );
 
 	// version num follows LuaJIT style, xxyyzz
-	LUA->PushNumber( 10001 );
+	LUA->PushNumber( 10100 );
 	LUA->SetField( -2, "VersionNum" );
 
 	LUA->PushCFunction( Open );
@@ -373,8 +395,11 @@ void Initialize( lua_State *state )
 	LUA->PushCFunction( GetSearchPaths );
 	LUA->SetField( -2, "GetSearchPaths" );
 
-	LUA->PushCFunction( MountSteamContent );
-	LUA->SetField( -2, "MountSteamContent" );
+	LUA->PushCFunction( AddSearchPath );
+	LUA->SetField( -2, "AddSearchPath" );
+
+	LUA->PushCFunction( RemoveSearchPath );
+	LUA->SetField( -2, "RemoveSearchPath" );
 
 	LUA->PushCFunction( IsLittleEndian );
 	LUA->SetField( -2, "IsLittleEndian" );

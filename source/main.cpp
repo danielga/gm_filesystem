@@ -42,10 +42,6 @@ static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio", false, fa
 #endif
 
 IFileSystem *filesystem = nullptr;
-const char *vfs_lower_pathid = "vfs";
-static const char *vfs_pathid = "VFS";
-static const char *vfs_dir = "vfs";
-static const char *vfs_path = "garrysmod" CORRECT_PATH_SEPARATOR_S "vfs";
 
 static void Initialize( lua_State *state )
 {
@@ -71,17 +67,10 @@ static void Initialize( lua_State *state )
 		LUA->ThrowError( "unable to initialize IFileSystem" );
 
 #endif
-
-	filesystem->CreateDirHierarchy( vfs_dir );
-	filesystem->AddSearchPath( vfs_path, "GAME" );
-	filesystem->AddSearchPath( vfs_path, vfs_pathid );
 }
 
 static void Deinitialize( lua_State *state )
-{
-	filesystem->RemoveSearchPath( vfs_path, "GAME" );
-	filesystem->RemoveSearchPaths( vfs_pathid );
-}
+{ }
 
 }
 

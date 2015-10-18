@@ -12,11 +12,25 @@ end
 include(gmcommon)
 
 CreateSolution("filesystem")
-	CreateProject(SERVERSIDE)
+	CreateProject(SERVERSIDE, SOURCES_MANUAL)
 		IncludeLuaShared()
 		IncludeScanning()
 		IncludeSourceSDK()
+		AddFiles({"*.cpp", "*.hpp"})
 
-	CreateProject(CLIENTSIDE)
+		SetFilter(FILTER_WINDOWS)
+			AddFiles({"win32/*.cpp", "win32/*.hpp"})
+
+		SetFilter(FILTER_LINUX, FILTER_MACOSX)
+			AddFiles({"posix/*.cpp", "posix/*.hpp"})
+
+	CreateProject(CLIENTSIDE, SOURCES_MANUAL)
 		IncludeLuaShared()
 		IncludeSourceSDK()
+		AddFiles({"*.cpp", "*.hpp"})
+
+		SetFilter(FILTER_WINDOWS)
+			AddFiles({"win32/*.cpp", "win32/*.hpp"})
+
+		SetFilter(FILTER_LINUX, FILTER_MACOSX)
+			AddFiles({"posix/*.cpp", "posix/*.hpp"})

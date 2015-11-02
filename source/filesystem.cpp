@@ -1,12 +1,20 @@
 #include <GarrysMod/Lua/Interface.h>
 #include <file.hpp>
 #include <filesystemwrapper.hpp>
+#include <interface.h>
+#include <filesystem.h>
+
+#if defined max || defined min
+
+#undef max
+#undef min
+
+#endif
+
 #include <interfaces.hpp>
 #include <cstdint>
 #include <string>
 #include <tuple>
-#include <interface.h>
-#include <filesystem.h>
 
 #if defined FILESYSTEM_SERVER
 
@@ -159,9 +167,9 @@ void Initialize( lua_State *state )
 
 	SymbolFinder symfinder;
 
-	CreateInterfaceFn factory = static_cast<CreateInterfaceFn>( symfinder.ResolveOnBinary(
+	CreateInterfaceFn factory = reinterpret_cast<CreateInterfaceFn>( symfinder.ResolveOnBinary(
 		dedicated_binary.c_str( ), FileSystemFactory_sym, FileSystemFactory_symlen
-		) );
+	) );
 	if( factory == nullptr )
 		LUA->ThrowError( "unable to retrieve dedicated factory" );
 

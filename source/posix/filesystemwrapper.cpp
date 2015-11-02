@@ -1,6 +1,7 @@
 #include <filesystemwrapper.hpp>
 #include <filevalve.hpp>
 #include <cstdint>
+#include <cstring>
 #include <cctype>
 #include <unordered_set>
 #include <algorithm>
@@ -67,7 +68,7 @@ file::Base *Wrapper::Open( const std::string &fpath, const std::string &opts, co
 {
 	std::string filepath = fpath, options = opts, pathid = pid;
 
-	std::transform( options.begin( ), options.end( ), options.begin( ), std::tolower );
+	std::transform( options.begin( ), options.end( ), options.begin( ), tolower );
 	WhitelistType wtype = options.find_first_of( "wa+" ) != options.npos ?
 		WhitelistType::Write : WhitelistType::Read;
 
@@ -283,7 +284,7 @@ bool Wrapper::IsPathIDAllowed( std::string &pathid, WhitelistType whitelist_type
 	if( pathid.empty( ) )
 		return false;
 
-	std::transform( pathid.begin( ), pathid.end( ), pathid.begin( ), std::tolower );
+	std::transform( pathid.begin( ), pathid.end( ), pathid.begin( ), tolower );
 	const auto &whitelist = whitelist_pathid[static_cast<size_t>( whitelist_type )];
 	return whitelist.find( pathid ) != whitelist.end( );
 }
@@ -325,7 +326,7 @@ bool Wrapper::VerifyExtension( const std::string &filepath, WhitelistType whitel
 	if( whitelist_type == WhitelistType::Write && extension != nullptr )
 	{
 		std::string ext = extension;
-		std::transform( ext.begin( ), ext.end( ), ext.begin( ), std::tolower );
+		std::transform( ext.begin( ), ext.end( ), ext.begin( ), tolower );
 		if( whitelist_extensions.find( extension ) == whitelist_extensions.end( ) )
 			return false;
 	}

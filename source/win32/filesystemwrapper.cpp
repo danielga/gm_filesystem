@@ -2,6 +2,7 @@
 #include <filevalve.hpp>
 #include <filestream.hpp>
 #include <cstdint>
+#include <cstring>
 #include <cctype>
 #include <unordered_set>
 #include <algorithm>

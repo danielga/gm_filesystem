@@ -12,6 +12,8 @@ end
 include(gmcommon)
 
 CreateSolution("filesystem")
+	warnings("Default")
+
 	CreateProject(SERVERSIDE, SOURCES_MANUAL)
 		IncludeLuaShared()
 		IncludeScanning()

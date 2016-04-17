@@ -14,7 +14,7 @@ namespace filesystem
 {
 
 const size_t Wrapper::max_tempbuffer_len = 16384;
-const std::unordered_set<std::string> Wrapper::whitelist_extensions = {
+std::unordered_set<std::string> Wrapper::whitelist_extensions = {
 	// garry's mod
 	"lua", "gma", "cache",
 	// data
@@ -32,7 +32,7 @@ const std::unordered_set<std::string> Wrapper::whitelist_extensions = {
 	// assorted
 	"tmp", "md", "db", "inf"
 };
-const std::unordered_set<std::string> Wrapper::whitelist_pathid[] = {
+std::unordered_set<std::string> Wrapper::whitelist_pathid[] = {
 	{
 		"data", "download", "lua", "lcl", "lsv", "game", "garrysmod", "gamebin", "mod",
 		"base_path", "executable_path", "default_write_path"

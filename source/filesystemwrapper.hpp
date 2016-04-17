@@ -1,13 +1,15 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
-#include <list>
 #include <utility>
+#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
 
 class IFileSystem;
+class CBaseFileSystem;
 
 namespace file
 {
@@ -33,11 +35,11 @@ public:
 		const std::string &pathid
 	);
 
-	bool Exists( const std::string &filepath, const std::string &pathid );
-	bool IsDirectory( const std::string &filepath, const std::string &pathid );
+	bool Exists( const std::string &filepath, const std::string &pathid ) const;
+	bool IsDirectory( const std::string &filepath, const std::string &pathid ) const;
 
-	uint64_t GetSize( const std::string &filepath, const std::string &pathid );
-	uint64_t GetTime( const std::string &filepath, const std::string &pathid );
+	uint64_t GetSize( const std::string &filepath, const std::string &pathid ) const;
+	uint64_t GetTime( const std::string &filepath, const std::string &pathid ) const;
 
 	bool Rename( const std::string &pathold, const std::string &pathnew, const std::string &pathid );
 	bool Remove( const std::string &path, const std::string &pathid );
@@ -46,40 +48,41 @@ public:
 	std::pair< std::set<std::string>, std::set<std::string> > Find(
 		const std::string &path,
 		const std::string &pathid
-	);
+	) const;
 
-	std::list<std::string> GetSearchPaths( const std::string &pathid );
+	std::unordered_map< std::string, std::list<std::string> > GetSearchPaths( ) const;
+	std::list<std::string> GetSearchPaths( const std::string &pathid ) const;
 	bool AddSearchPath( const std::string &path, const std::string &pathid );
 	bool RemoveSearchPath( const std::string &path, const std::string &pathid );
 
 private:
-	enum class WhitelistType
+	enum WhitelistType
 	{
-		Read,
-		Write,
-		SearchPath
+		WhitelistRead,
+		WhitelistWrite,
+		WhitelistSearchPath
 	};
 
-	bool IsPathIDAllowed( std::string &pathid, WhitelistType whitelist_type );
-	bool FixupFilePath( std::string &filepath, const std::string &pathid );
-	bool VerifyFilePath( const std::string &filepath, bool find, bool &nonascii );
-	bool VerifyExtension( const std::string &filepath, WhitelistType whitelist_type );
+	bool IsPathIDAllowed( std::string &pathid, WhitelistType whitelist_type ) const;
+	bool FixupFilePath( std::string &filepath, const std::string &pathid ) const;
+	bool VerifyFilePath( const std::string &filepath, bool find, bool &nonascii ) const;
+	bool VerifyExtension( const std::string &filepath, WhitelistType whitelist_type ) const;
 	bool IsPathAllowed(
 		std::string &filepath,
 		std::string &pathid,
 		WhitelistType whitelist_type,
 		bool &nonascii,
 		bool find = false
-	);
+	) const;
 	std::string GetPath(
 		const std::string &filepath,
 		const std::string &pathid,
 		WhitelistType whitelist_type
-	);
+	) const;
 
 	static const size_t max_tempbuffer_len;
-	static const std::unordered_set<std::string> whitelist_extensions;
-	static const std::unordered_set<std::string> whitelist_pathid[];
+	static std::unordered_set<std::string> whitelist_extensions;
+	static std::unordered_set<std::string> whitelist_pathid[];
 	static std::unordered_map<std::string, std::string> whitelist_writepaths;
 
 	IFileSystem *fsystem;

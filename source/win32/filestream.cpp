@@ -1,4 +1,4 @@
-#include <filestream.hpp>
+#include "filestream.hpp"
 
 namespace file
 {
@@ -43,7 +43,7 @@ bool Stream::Close( )
 	return true;
 }
 
-int64_t Stream::Size( )
+int64_t Stream::Size( ) const
 {
 	if( !Valid( ) )
 		return -1;
@@ -55,7 +55,7 @@ int64_t Stream::Size( )
 	return size;
 }
 
-int64_t Stream::Tell( )
+int64_t Stream::Tell( ) const
 {
 	if( !Valid( ) )
 		return -1;

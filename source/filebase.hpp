@@ -6,11 +6,11 @@
 namespace file
 {
 
-enum class SeekDirection
+enum SeekDirection
 {
-	Set,
-	Cur,
-	End
+	SeekBeg,
+	SeekCur,
+	SeekEnd
 };
 
 class Base
@@ -24,8 +24,8 @@ public:
 
 	virtual bool Close( ) = 0;
 
-	virtual int64_t Size( ) = 0;
-	virtual int64_t Tell( ) = 0;
+	virtual int64_t Size( ) const = 0;
+	virtual int64_t Tell( ) const = 0;
 	virtual bool Seek( int64_t pos, SeekDirection dir ) = 0;
 
 	virtual bool Flush( ) = 0;

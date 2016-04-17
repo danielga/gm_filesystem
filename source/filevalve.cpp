@@ -46,7 +46,7 @@ bool Valve::Close( )
 	return true;
 }
 
-int64_t Valve::Size( )
+int64_t Valve::Size( ) const
 {
 	if( !Valid( ) )
 		return -1;
@@ -54,7 +54,7 @@ int64_t Valve::Size( )
 	return filesystem->Size( filehandle );
 }
 
-int64_t Valve::Tell( )
+int64_t Valve::Tell( ) const
 {
 	if( !Valid( ) )
 		return -1;

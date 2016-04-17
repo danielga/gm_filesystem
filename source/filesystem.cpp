@@ -11,7 +11,7 @@
 
 #endif
 
-#include <interfaces.hpp>
+#include <GarrysMod/Interfaces.hpp>
 #include <cstdint>
 #include <string>
 #include <tuple>
@@ -21,6 +21,30 @@
 #include <symbolfinder.hpp>
 
 #endif
+
+/*
+// Some code for obtaining lists of addons, gamemodes, games and legacy addons.
+
+Addon::FileSystem *addons = fsystem->Addons( );
+const std::list<IAddonSystem::Information> &alist = addons->GetList( );
+if( alist.size( ) > 0 )
+const IAddonSystem::Information &first = alist.front( );
+
+Gamemode::System *gamemodes = fsystem->Gamemodes( );
+const std::list<IGamemodeSystem::Information> &gmlist = gamemodes->GetList( );
+if( gmlist.size( ) > 0 )
+const IGamemodeSystem::Information &first = gmlist.front( );
+
+GameDepot::System *games = fsystem->Games( );
+const std::list<IGameDepotSystem::Information> &glist = games->GetList( );
+if( glist.size( ) > 0 )
+const IGameDepotSystem::Information &first = glist.front( );
+
+LegacyAddons::System *legacy = fsystem->LegacyAddons( );
+const std::list<ILegacyAddons::Information> &llist = legacy->GetList( );
+if( llist.size( ) > 0 )
+const ILegacyAddons::Information &first = llist.front( );
+*/
 
 namespace filesystem
 {
@@ -134,15 +158,39 @@ LUA_FUNCTION_STATIC( Find )
 
 LUA_FUNCTION_STATIC( GetSearchPaths )
 {
-	std::list<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
-
-	LUA->CreateTable( );
-	size_t npaths = 0;
-	for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
+	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::NIL )
 	{
-		LUA->PushNumber( ++npaths );
-		LUA->PushString( ( *it ).c_str( ) );
-		LUA->SetTable( -3 );
+		std::unordered_map< std::string, std::list<std::string> > searchpaths = filesystem.GetSearchPaths( );
+
+		LUA->CreateTable( );
+		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
+		{
+			LUA->PushString( ( *it ).first.c_str( ) );
+			LUA->CreateTable( );
+
+			size_t npaths = 0;
+			for( auto it2 = ( *it ).second.begin( ); it2 != ( *it ).second.end( ); ++it2 )
+			{
+				LUA->PushNumber( ++npaths );
+				LUA->PushString( ( *it2 ).c_str( ) );
+				LUA->SetTable( -3 );
+			}
+
+			LUA->SetTable( -3 );
+		}
+	}
+	else
+	{
+		std::list<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
+
+		LUA->CreateTable( );
+		size_t npaths = 0;
+		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
+		{
+			LUA->PushNumber( ++npaths );
+			LUA->PushString( ( *it ).c_str( ) );
+			LUA->SetTable( -3 );
+		}
 	}
 
 	return 1;
@@ -190,11 +238,11 @@ void Initialize( lua_State *state )
 
 	LUA->CreateTable( );
 
-	LUA->PushString( "filesystem 1.3.0" );
+	LUA->PushString( "filesystem 1.4.0" );
 	LUA->SetField( -2, "Version" );
 
 	// version num follows LuaJIT style, xxyyzz
-	LUA->PushNumber( 10300 );
+	LUA->PushNumber( 10400 );
 	LUA->SetField( -2, "VersionNum" );
 
 	LUA->PushCFunction( Open );

@@ -154,11 +154,11 @@ LUA_FUNCTION_STATIC( Seek )
 	Base *file = Get( state, 1 );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
-	SeekDirection seektype = SeekDirection::Set;
+	SeekDirection seektype = SeekBeg;
 	if( LUA->IsType( 3, GarrysMod::Lua::Type::NUMBER ) )
 	{
 		uint32_t num = static_cast<uint32_t>( LUA->GetNumber( 3 ) );
-		if( num >= static_cast<uint32_t>( SeekDirection::Set ) && num <= static_cast<uint32_t>( SeekDirection::End ) )
+		if( num >= static_cast<uint32_t>( SeekBeg ) && num <= static_cast<uint32_t>( SeekEnd ) )
 			seektype = static_cast<SeekDirection>( num );
 	}
 
@@ -219,7 +219,7 @@ LUA_FUNCTION_STATIC( ReadString )
 		buffer += c;
 	}
 
-	file->Seek( pos, SeekDirection::Set );
+	file->Seek( pos, SeekBeg );
 	return 0;
 }
 
@@ -272,7 +272,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 			int64_t num = 0;
 			file->Read( &num, sizeof( num ) );
-			LUA->PushNumber( InvertBytes( num, invert ) );
+			LUA->PushNumber( static_cast<double>( InvertBytes( num, invert ) ) );
 			break;
 		}
 
@@ -332,7 +332,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 			uint64_t num = 0;
 			file->Read( &num, sizeof( num ) );
-			LUA->PushNumber( InvertBytes( num, invert ) );
+			LUA->PushNumber( static_cast<double>( InvertBytes( num, invert ) ) );
 			break;
 		}
 

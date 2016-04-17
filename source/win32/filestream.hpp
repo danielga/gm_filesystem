@@ -18,8 +18,8 @@ public:
 
 	bool Close( );
 
-	int64_t Size( );
-	int64_t Tell( );
+	int64_t Size( ) const;
+	int64_t Tell( ) const;
 	bool Seek( int64_t pos, SeekDirection dir );
 
 	bool Flush( );

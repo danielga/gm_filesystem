@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 #include <utility>
-#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -50,8 +49,8 @@ public:
 		const std::string &pathid
 	) const;
 
-	std::unordered_map< std::string, std::list<std::string> > GetSearchPaths( ) const;
-	std::list<std::string> GetSearchPaths( const std::string &pathid ) const;
+	std::unordered_map< std::string, std::set<std::string> > GetSearchPaths( ) const;
+	std::set<std::string> GetSearchPaths( const std::string &pathid ) const;
 	bool AddSearchPath( const std::string &path, const std::string &pathid );
 	bool RemoveSearchPath( const std::string &path, const std::string &pathid );
 

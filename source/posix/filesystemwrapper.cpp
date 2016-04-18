@@ -1,9 +1,7 @@
 #include <filesystemwrapper.hpp>
 #include <filevalve.hpp>
-#include <cstdint>
 #include <cstring>
 #include <cctype>
-#include <unordered_set>
 #include <algorithm>
 #include <basefilesystem.hpp>
 #include <utllinkedlist.h>
@@ -69,7 +67,7 @@ bool Wrapper::Initialize( IFileSystem *fsinterface )
 		const std::unordered_set<std::string> &whitelist = whitelist_pathid[static_cast<size_t>( WhitelistWrite )];
 		for( auto it = whitelist.begin( ); it != whitelist.end( ); ++it )
 		{
-			int32_t len = fsystem->GetSearchPath_safe( ( *it ).c_str( ), false, searchpath ) - 1;
+			int32_t len = fsystem->GetSearchPath_safe( it->c_str( ), false, searchpath ) - 1;
 			if( len <= 0 )
 				return false;
 
@@ -244,11 +242,11 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 	return std::make_pair( files, directories );
 }
 
-std::unordered_map< std::string, std::list<std::string> > Wrapper::GetSearchPaths( ) const
+std::unordered_map< std::string, std::set<std::string> > Wrapper::GetSearchPaths( ) const
 {
 	CBaseFileSystem *fsystem = reinterpret_cast<CBaseFileSystem *>( this->fsystem );
 
-	std::unordered_map< std::string, std::list<std::string> > searchpaths;
+	std::unordered_map< std::string, std::set<std::string> > searchpaths;
 
 	const CUtlLinkedList<CBaseFileSystem::CSearchPath> &m_SearchPaths = fsystem->m_SearchPaths;
 	for( int32_t k = 0; k < m_SearchPaths.Count( ); ++k )
@@ -265,18 +263,18 @@ std::unordered_map< std::string, std::list<std::string> > Wrapper::GetSearchPath
 		{
 			std::string filepath = m_pPackFile->filepath;
 			filepath += ".vpk";
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].push_back( filepath );
+			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( filepath );
 		}
 		else
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].push_back( searchpath.m_pDebugPath );
+			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( searchpath.m_pDebugPath );
 	}
 
 	return searchpaths;
 }
 
-std::list<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) const
+std::set<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) const
 {
-	std::list<std::string> searchpaths;
+	std::set<std::string> searchpaths;
 
 	char paths[max_tempbuffer_len] = { 0 };
 	const int32_t len = fsystem->GetSearchPath_safe( pathid.c_str( ), true, paths ) - 1;
@@ -287,11 +285,11 @@ std::list<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) cons
 	for( ; pos != end; start = ++pos, pos = std::find( start, end, ';' ) )
 	{
 		*pos = '\0';
-		searchpaths.push_back( start );
+		searchpaths.insert( start );
 	}
 
 	if( start != end )
-		searchpaths.push_back( start );
+		searchpaths.insert( start );
 
 	return searchpaths;
 }

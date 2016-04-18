@@ -2,10 +2,8 @@
 #include <filevalve.hpp>
 #include "filestream.hpp"
 #include "unicode.hpp"
-#include <cstdint>
 #include <cstring>
 #include <cctype>
-#include <unordered_set>
 #include <algorithm>
 #include <basefilesystem.hpp>
 #include <utllinkedlist.h>
@@ -30,6 +28,12 @@ static std::unordered_set<std::string> blacklist_filenames;
 
 Wrapper::Wrapper( ) :
 	fsystem( nullptr )
+{ }
+
+Wrapper::~Wrapper( )
+{ }
+
+bool Wrapper::Initialize( IFileSystem *fsinterface )
 {
 	if( whitelist_extensions.empty( ) )
 	{
@@ -89,13 +93,7 @@ Wrapper::Wrapper( ) :
 		};
 		blacklist_filenames.insert( filenames, filenames + sizeof( filenames ) / sizeof( *filenames ) );
 	}
-}
 
-Wrapper::~Wrapper( )
-{ }
-
-bool Wrapper::Initialize( IFileSystem *fsinterface )
-{
 	fsystem = fsinterface;
 
 	{
@@ -114,7 +112,7 @@ bool Wrapper::Initialize( IFileSystem *fsinterface )
 		const std::unordered_set<std::string> &whitelist = whitelist_pathid[static_cast<size_t>( WhitelistWrite )];
 		for( auto it = whitelist.begin( ); it != whitelist.end( ); ++it )
 		{
-			int32_t len = fsystem->GetSearchPath_safe( ( *it ).c_str( ), false, searchpath ) - 1;
+			int32_t len = fsystem->GetSearchPath_safe( it->c_str( ), false, searchpath ) - 1;
 			if( len <= 0 )
 				return false;
 
@@ -386,16 +384,16 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 
 	// Win32 API finding (allows proper handling of Unicode)
 	{
-		std::list<std::string> searchpaths = GetSearchPaths( pathid );
+		std::set<std::string> searchpaths = GetSearchPaths( pathid );
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
 		{
 			// check if the searchpath is actually a file, we can search inside these
-			const DWORD attrib = GetFileAttributesA( ( *it ).c_str( ) );
+			const DWORD attrib = GetFileAttributesA( it->c_str( ) );
 			if( attrib != INVALID_FILE_ATTRIBUTES && ( attrib & FILE_ATTRIBUTE_DIRECTORY ) == 0 )
 				continue;
 
 			char fullpath[max_tempbuffer_len] = { 0 };
-			V_ComposeFileName( ( *it ).c_str( ), filename.c_str( ), fullpath, sizeof( fullpath ) );
+			V_ComposeFileName( it->c_str( ), filename.c_str( ), fullpath, sizeof( fullpath ) );
 			const std::wstring wfilename = Unicode::UTF8::ToUTF16( fullpath, fullpath + std::strlen( fullpath ) );
 
 			WIN32_FIND_DATAW find_data;
@@ -432,11 +430,11 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 	return std::make_pair( files, directories );
 }
 
-std::unordered_map< std::string, std::list<std::string> > Wrapper::GetSearchPaths( ) const
+std::unordered_map< std::string, std::set<std::string> > Wrapper::GetSearchPaths( ) const
 {
 	CBaseFileSystem *fsystem = reinterpret_cast<CBaseFileSystem *>( this->fsystem );
 
-	std::unordered_map< std::string, std::list<std::string> > searchpaths;
+	std::unordered_map< std::string, std::set<std::string> > searchpaths;
 
 	const CUtlLinkedList<CBaseFileSystem::CSearchPath> &m_SearchPaths = fsystem->m_SearchPaths;
 	for( int32_t k = 0; k < m_SearchPaths.Count( ); ++k )
@@ -453,18 +451,18 @@ std::unordered_map< std::string, std::list<std::string> > Wrapper::GetSearchPath
 		{
 			std::string filepath = m_pPackFile->filepath;
 			filepath += ".vpk";
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].push_back( filepath );
+			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( filepath );
 		}
 		else
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].push_back( searchpath.m_pDebugPath );
+			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( searchpath.m_pDebugPath );
 	}
 
 	return searchpaths;
 }
 
-std::list<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) const
+std::set<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) const
 {
-	std::list<std::string> searchpaths;
+	std::set<std::string> searchpaths;
 
 	char paths[max_tempbuffer_len] = { 0 };
 	const int32_t len = fsystem->GetSearchPath_safe( pathid.c_str( ), true, paths ) - 1;
@@ -475,11 +473,11 @@ std::list<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) cons
 	for( ; pos != end; start = ++pos, pos = std::find( start, end, ';' ) )
 	{
 		*pos = '\0';
-		searchpaths.push_back( start );
+		searchpaths.insert( start );
 	}
 
 	if( start != end )
-		searchpaths.push_back( start );
+		searchpaths.insert( start );
 
 	return searchpaths;
 }
@@ -618,10 +616,10 @@ std::string Wrapper::GetPath(
 	if( wtype == WhitelistRead )
 	{
 		bool notfound = true;
-		const std::list<std::string> searchpaths = GetSearchPaths( pathid );
+		const std::set<std::string> searchpaths = GetSearchPaths( pathid );
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
 		{
-			V_ComposeFileName( ( *it ).c_str( ), filepath.c_str( ), fullpath, sizeof( fullpath ) );
+			V_ComposeFileName( it->c_str( ), filepath.c_str( ), fullpath, sizeof( fullpath ) );
 			const std::wstring wfilename = Unicode::UTF8::ToUTF16( fullpath, fullpath + std::strlen( fullpath ) );
 			if( GetFileAttributesW( wfilename.c_str( ) ) != INVALID_FILE_ATTRIBUTES )
 			{
@@ -640,7 +638,7 @@ std::string Wrapper::GetPath(
 			return "";
 
 		V_ComposeFileName(
-			( *searchpath ).second.c_str( ),
+			searchpath->second.c_str( ),
 			filepath.c_str( ),
 			fullpath,
 			sizeof( fullpath )

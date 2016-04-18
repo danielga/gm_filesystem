@@ -140,7 +140,7 @@ LUA_FUNCTION_STATIC( Find )
 	for( auto it = files.begin( ); it != files.end( ); ++it )
 	{
 		LUA->PushNumber( ++nfiles );
-		LUA->PushString( ( *it ).c_str( ) );
+		LUA->PushString( it->c_str( ) );
 		LUA->SetTable( -3 );
 	}
 
@@ -149,7 +149,7 @@ LUA_FUNCTION_STATIC( Find )
 	for( auto it = directories.begin( ); it != directories.end( ); ++it )
 	{
 		LUA->PushNumber( ++ndirs );
-		LUA->PushString( ( *it ).c_str( ) );
+		LUA->PushString( it->c_str( ) );
 		LUA->SetTable( -3 );
 	}
 
@@ -160,19 +160,20 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 {
 	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::NIL )
 	{
-		std::unordered_map< std::string, std::list<std::string> > searchpaths = filesystem.GetSearchPaths( );
+		std::unordered_map< std::string, std::set<std::string> > searchpaths = filesystem.GetSearchPaths( );
 
 		LUA->CreateTable( );
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
 		{
-			LUA->PushString( ( *it ).first.c_str( ) );
+			LUA->PushString( it->first.c_str( ) );
 			LUA->CreateTable( );
 
 			size_t npaths = 0;
-			for( auto it2 = ( *it ).second.begin( ); it2 != ( *it ).second.end( ); ++it2 )
+			const std::set<std::string> &paths = it->second;
+			for( auto it2 = paths.begin( ); it2 != paths.end( ); ++it2 )
 			{
 				LUA->PushNumber( ++npaths );
-				LUA->PushString( ( *it2 ).c_str( ) );
+				LUA->PushString( it2->c_str( ) );
 				LUA->SetTable( -3 );
 			}
 
@@ -181,14 +182,14 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	}
 	else
 	{
-		std::list<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
+		std::set<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
 
 		LUA->CreateTable( );
 		size_t npaths = 0;
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
 		{
 			LUA->PushNumber( ++npaths );
-			LUA->PushString( ( *it ).c_str( ) );
+			LUA->PushString( it->c_str( ) );
 			LUA->SetTable( -3 );
 		}
 	}

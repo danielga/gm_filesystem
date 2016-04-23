@@ -2,6 +2,12 @@
 #include <filesystem.hpp>
 #include <file.hpp>
 
+#if defined _WIN32 && _MSC_VER != 1600
+
+#error The only supported compilation platform for this project on Windows is Visual Studio 2010 (for ABI reasons).
+
+#endif
+
 GMOD_MODULE_OPEN( )
 {
 	file::Initialize( state );

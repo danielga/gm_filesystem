@@ -1,42 +1,52 @@
 if os.is("windows") and _ACTION ~= "vs2010" then
-	error("The only supported compilation platform for this project on Windows is Visual Studio 2010 (for ABI reasons).")
+	error("The only supported compilation platform for this project on Windows is Visual Studio 2010.")
+elseif os.is("linux") then
+	print("WARNING: The only supported compilation platforms (tested) for this project on Linux are GCC/G++ 4.8 or 4.9. However, any version between 4.4 and 4.9 *MIGHT* work.")
+elseif os.is("macosx") then
+	print("WARNING: The only supported compilation platform (tested) for this project on Mac OSX is Xcode 4.1. However, any Xcode version *MIGHT* work as long as the Mac OSX 10.5 SDK is used (-mmacosx-version-min=10.5).")
 end
 
 newoption({
 	trigger = "gmcommon",
-	description = "Sets the path to the garrysmod_common (https://bitbucket.org/danielga/garrysmod_common) directory",
-	value = "path to garrysmod_common dir"
+	description = "Sets the path to the garrysmod_common (https://github.com/danielga/garrysmod_common) directory",
+	value = "path to garrysmod_common directory"
 })
 
 local gmcommon = _OPTIONS.gmcommon or os.getenv("GARRYSMOD_COMMON")
 if gmcommon == nil then
-	error("you didn't provide a path to your garrysmod_common (https://bitbucket.org/danielga/garrysmod_common) directory")
+	error("you didn't provide a path to your garrysmod_common (https://github.com/danielga/garrysmod_common) directory")
 end
 
 include(gmcommon)
 
-CreateSolution("filesystem")
+CreateWorkspace({name = "filesystem", allow_debug = false})
 	warnings("Default")
 
-	CreateProject(SERVERSIDE, SOURCES_MANUAL)
+	filter("system:macosx")
+		buildoptions("-mmacosx-version-min=10.5")
+		linkoptions("-mmacosx-version-min=10.5")
+
+	CreateProject({serverside = true})
 		IncludeLuaShared()
 		IncludeScanning()
-		IncludeSourceSDK()
-		AddFiles({"*.cpp", "*.hpp"})
+		IncludeSDKCommon()
+		IncludeSDKTier0()
+		IncludeSDKTier1()
 
-		SetFilter(FILTER_WINDOWS)
-			AddFiles({"win32/*.cpp", "win32/*.hpp"})
+		filter("system:windows")
+			files({"../source/win32/*.cpp", "../source/win32/*.hpp"})
 
-		SetFilter(FILTER_LINUX, FILTER_MACOSX)
-			AddFiles({"posix/*.cpp", "posix/*.hpp"})
+		filter("system:linux or macosx")
+			files({"../source/posix/*.cpp", "../source/posix/*.hpp"})
 
-	CreateProject(CLIENTSIDE, SOURCES_MANUAL)
+	CreateProject({serverside = false})
 		IncludeLuaShared()
-		IncludeSourceSDK()
-		AddFiles({"*.cpp", "*.hpp"})
+		IncludeSDKCommon()
+		IncludeSDKTier0()
+		IncludeSDKTier1()
 
-		SetFilter(FILTER_WINDOWS)
-			AddFiles({"win32/*.cpp", "win32/*.hpp"})
+		filter("system:windows")
+			files({"../source/win32/*.cpp", "../source/win32/*.hpp"})
 
-		SetFilter(FILTER_LINUX, FILTER_MACOSX)
-			AddFiles({"posix/*.cpp", "posix/*.hpp"})
+		filter("system:linux or macosx")
+			files({"../source/posix/*.cpp", "../source/posix/*.hpp"})

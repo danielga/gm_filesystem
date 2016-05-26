@@ -1,7 +1,7 @@
 gm_filesystem
 A Garry's Mod module that adds an advanced filesystem interface.
 -----------------------------------------------------------------------
-Copyright (c) 2015, Daniel Almeida
+Copyright (c) 2015-2016, Daniel Almeida
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

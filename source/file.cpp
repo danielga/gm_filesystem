@@ -11,48 +11,46 @@ namespace file
 {
 
 static const char *metaname = "FileHandle";
-static uint8_t metatype = GarrysMod::Lua::Type::COUNT;
+static uint8_t metatype = 255;
 static const char *invalid_error = "invalid FileHandle";
 
-struct UserData
+struct Container
 {
 	Base *file;
-	uint8_t type;
 	bool invert;
 };
 
-inline void CheckType( lua_State *state, int32_t index )
+inline void CheckType( GarrysMod::Lua::ILuaBase *LUA, int32_t index )
 {
 	if( !LUA->IsType( index, metatype ) )
-		luaL_typerror( state, index, metaname );
+		luaL_typerror( LUA->GetState( ), index, metaname );
 }
 
-static Base *Get( lua_State *state, int32_t index, bool *invert = nullptr )
+static Base *Get( GarrysMod::Lua::ILuaBase *LUA, int32_t index, bool *invert = nullptr )
 {
-	CheckType( state, index );
-	UserData *udata = static_cast<UserData *>( LUA->GetUserdata( index ) );
-	Base *file = udata->file;
+	CheckType( LUA, index );
+	Container *container = LUA->GetUserType<Container>( index, metatype );
+	Base *file = container->file;
 	if( file == nullptr )
 		LUA->ArgError( index, invalid_error );
 
 	if( invert != nullptr )
-		*invert = udata->invert;
+		*invert = container->invert;
 
 	return file;
 }
 
-void Create( lua_State *state, Base *file )
+void Create( GarrysMod::Lua::ILuaBase *LUA, Base *file )
 {
-	UserData *udata = static_cast<UserData *>( LUA->NewUserdata( sizeof( UserData ) ) );
-	udata->file = file;
-	udata->type = metatype;
-	udata->invert = false;
+	Container *container = LUA->NewUserType<Container>( metatype );
+	container->file = file;
+	container->invert = false;
 
-	LUA->CreateMetaTableType( metaname, metatype );
+	LUA->PushMetaTable( metatype );
 	LUA->SetMetaTable( -2 );
 
 	LUA->CreateTable( );
-	lua_setfenv( state, -2 );
+	lua_setfenv( LUA->GetState( ), -2 );
 }
 
 template<class Type> inline Type InvertBytes( Type data, bool invert )
@@ -69,13 +67,13 @@ template<class Type> inline Type InvertBytes( Type data, bool invert )
 
 LUA_FUNCTION_STATIC( tostring )
 {
-	lua_pushfstring( state, "%s: %p", metaname, Get( state, 1 ) );
+	lua_pushfstring( LUA->GetState( ), "%s: %p", metaname, Get( LUA, 1 ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( eq )
 {
-	LUA->PushBool( Get( state, 1 ) == Get( state, 2 ) );
+	LUA->PushBool( Get( LUA, 1 ) == Get( LUA, 2 ) );
 	return 1;
 }
 
@@ -89,7 +87,7 @@ LUA_FUNCTION_STATIC( index )
 
 	LUA->Pop( 2 );
 
-	lua_getfenv( state, 1 );
+	lua_getfenv( LUA->GetState( ), 1 );
 	LUA->Push( 2 );
 	LUA->RawGet( -2 );
 	return 1;
@@ -97,7 +95,7 @@ LUA_FUNCTION_STATIC( index )
 
 LUA_FUNCTION_STATIC( newindex )
 {
-	lua_getfenv( state, 1 );
+	lua_getfenv( LUA->GetState( ), 1 );
 	LUA->Push( 2 );
 	LUA->Push( 3 );
 	LUA->RawSet( -3 );
@@ -106,52 +104,52 @@ LUA_FUNCTION_STATIC( newindex )
 
 LUA_FUNCTION_STATIC( Close )
 {
-	CheckType( state, 1 );
-	UserData *udata = static_cast<UserData *>( LUA->GetUserdata( 1 ) );
+	CheckType( LUA, 1 );
+	Container *container = LUA->GetUserType<Container>( 1, metatype );
 
-	Base *file = udata->file;
+	Base *file = container->file;
 	if( file == nullptr )
 		return 0;
 
 	delete file;
-	udata->file = nullptr;
+	container->file = nullptr;
 	return 0;
 }
 
 LUA_FUNCTION_STATIC( IsValid )
 {
-	CheckType( state, 1 );
-	LUA->PushBool( static_cast<UserData *>( LUA->GetUserdata( 1 ) )->file != nullptr );
+	CheckType( LUA, 1 );
+	LUA->PushBool( LUA->GetUserType<Container>( 1, metatype )->file != nullptr );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( EndOfFile )
 {
-	LUA->PushBool( Get( state, 1 )->EndOfFile( ) );
+	LUA->PushBool( Get( LUA, 1 )->EndOfFile( ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( OK )
 {
-	LUA->PushBool( Get( state, 1 )->Good( ) );
+	LUA->PushBool( Get( LUA, 1 )->Good( ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( Size )
 {
-	LUA->PushNumber( static_cast<double>( Get( state, 1 )->Size( ) ) );
+	LUA->PushNumber( static_cast<double>( Get( LUA, 1 )->Size( ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( Tell )
 {
-	LUA->PushNumber( static_cast<double>( Get( state, 1 )->Tell( ) ) );
+	LUA->PushNumber( static_cast<double>( Get( LUA, 1 )->Tell( ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( Seek )
 {
-	Base *file = Get( state, 1 );
+	Base *file = Get( LUA, 1 );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	SeekDirection seektype = SeekBeg;
@@ -168,21 +166,21 @@ LUA_FUNCTION_STATIC( Seek )
 
 LUA_FUNCTION_STATIC( Flush )
 {
-	LUA->PushBool( Get( state, 1 )->Flush( ) );
+	LUA->PushBool( Get( LUA, 1 )->Flush( ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( InvertBytes )
 {
-	CheckType( state, 1 );
+	CheckType( LUA, 1 );
 	LUA->CheckType( 1, GarrysMod::Lua::Type::BOOL );
-	static_cast<UserData *>( LUA->GetUserdata( 1 ) )->invert = LUA->GetBool( 2 );
+	LUA->GetUserType<Container>( 1, metatype )->invert = LUA->GetBool( 2 );
 	return 0;
 }
 
 LUA_FUNCTION_STATIC( Read )
 {
-	Base *file = Get( state, 1 );
+	Base *file = Get( LUA, 1 );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	double len = LUA->GetNumber( 2 );
@@ -202,7 +200,7 @@ LUA_FUNCTION_STATIC( Read )
 
 LUA_FUNCTION_STATIC( ReadString )
 {
-	Base *file = Get( state, 1 );
+	Base *file = Get( LUA, 1 );
 
 	int64_t pos = file->Tell( );
 
@@ -226,7 +224,7 @@ LUA_FUNCTION_STATIC( ReadString )
 LUA_FUNCTION_STATIC( ReadInt )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 2 ) );
@@ -286,7 +284,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 LUA_FUNCTION_STATIC( ReadUInt )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 2 ) );
@@ -346,7 +344,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 LUA_FUNCTION_STATIC( ReadFloat )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 
 	if( file->Tell( ) + sizeof( float ) >= file->Size( ) )
 		return 0;
@@ -360,7 +358,7 @@ LUA_FUNCTION_STATIC( ReadFloat )
 LUA_FUNCTION_STATIC( ReadDouble )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 
 	if( file->Tell( ) + sizeof( double ) >= file->Size( ) )
 		return 0;
@@ -373,7 +371,7 @@ LUA_FUNCTION_STATIC( ReadDouble )
 
 LUA_FUNCTION_STATIC( Write )
 {
-	Base *file = Get( state, 1 );
+	Base *file = Get( LUA, 1 );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	size_t len = 0;
@@ -385,7 +383,7 @@ LUA_FUNCTION_STATIC( Write )
 
 LUA_FUNCTION_STATIC( WriteString )
 {
-	Base *file = Get( state, 1 );
+	Base *file = Get( LUA, 1 );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
 
 	size_t len = 0;
@@ -403,7 +401,7 @@ LUA_FUNCTION_STATIC( WriteString )
 LUA_FUNCTION_STATIC( WriteInt )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
 
@@ -448,7 +446,7 @@ LUA_FUNCTION_STATIC( WriteInt )
 LUA_FUNCTION_STATIC( WriteUInt )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
 
@@ -493,7 +491,7 @@ LUA_FUNCTION_STATIC( WriteUInt )
 LUA_FUNCTION_STATIC( WriteFloat )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	float num = InvertBytes( static_cast<float>( LUA->GetNumber( 2 ) ), invert );
@@ -504,7 +502,7 @@ LUA_FUNCTION_STATIC( WriteFloat )
 LUA_FUNCTION_STATIC( WriteDouble )
 {
 	bool invert = false;
-	Base *file = Get( state, 1, &invert );
+	Base *file = Get( LUA, 1, &invert );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
 
 	double num = InvertBytes( LUA->GetNumber( 2 ), invert );
@@ -512,9 +510,9 @@ LUA_FUNCTION_STATIC( WriteDouble )
 	return 1;
 }
 
-void Initialize( lua_State *state )
+void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 {
-	LUA->CreateMetaTableType( metaname, metatype );
+	metatype = LUA->CreateMetaTable( metaname );
 
 	LUA->PushCFunction( tostring );
 	LUA->SetField( -2, "__tostring" );
@@ -597,7 +595,7 @@ void Initialize( lua_State *state )
 	LUA->Pop( 1 );
 }
 
-void Deinitialize( lua_State *state )
+void Deinitialize( GarrysMod::Lua::ILuaBase *LUA )
 {
 	LUA->PushNil( );
 	LUA->SetField( GarrysMod::Lua::INDEX_REGISTRY, metaname );

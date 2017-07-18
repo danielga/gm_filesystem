@@ -2,9 +2,9 @@
 #include <filesystem.hpp>
 #include <file.hpp>
 
-#if defined _WIN32 && _MSC_VER != 1600
+#if defined _WIN32 && _MSC_VER != 1910
 
-#error The only supported compilation platform for this project on Windows is Visual Studio 2010 (for ABI reasons).
+#error The only supported compilation platform for this project on Windows is Visual Studio 2017 (for ABI reasons).
 
 #elif defined __linux && (__GNUC__ != 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 4))
 
@@ -24,14 +24,14 @@
 
 GMOD_MODULE_OPEN( )
 {
-	file::Initialize( state );
-	filesystem::Initialize( state );
+	file::Initialize( LUA );
+	filesystem::Initialize( LUA );
 	return 0;
 }
 
 GMOD_MODULE_CLOSE( )
 {
-	filesystem::Deinitialize( state );
-	file::Deinitialize( state );
+	filesystem::Deinitialize( LUA );
+	file::Deinitialize( LUA );
 	return 0;
 }

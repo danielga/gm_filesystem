@@ -1,14 +1,20 @@
 #pragma once
 
-struct lua_State;
+namespace GarrysMod
+{
+	namespace Lua
+	{
+		class ILuaBase;
+	}
+}
 
 namespace file
 {
 
 class Base;
 	
-void Initialize( lua_State *state );
-void Deinitialize( lua_State *state );
-void Create( lua_State *state, Base *file );
+void Initialize( GarrysMod::Lua::ILuaBase *LUA );
+void Deinitialize( GarrysMod::Lua::ILuaBase *LUA );
+void Create( GarrysMod::Lua::ILuaBase *LUA, Base *file );
 
 }

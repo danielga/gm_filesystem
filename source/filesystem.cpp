@@ -51,7 +51,7 @@ namespace filesystem
 
 #if defined FILESYSTEM_SERVER
 
-static std::string dedicated_binary = helpers::GetBinaryFileName( "dedicated", false, true, "bin/" );
+static std::string dedicated_binary = Helpers::GetBinaryFileName( "dedicated", false, true, "bin/" );
 
 #if defined _WIN32
 
@@ -84,7 +84,7 @@ LUA_FUNCTION_STATIC( Open )
 	if( f == nullptr )
 		return 0;
 
-	file::Create( state, f );
+	file::Create( LUA, f );
 	return 1;
 }
 
@@ -209,7 +209,7 @@ LUA_FUNCTION_STATIC( RemoveSearchPath )
 	return 1;
 }
 
-void Initialize( lua_State *state )
+void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 {
 
 #if defined FILESYSTEM_SERVER
@@ -298,7 +298,7 @@ void Initialize( lua_State *state )
 	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "filesystem" );
 }
 
-void Deinitialize( lua_State *state )
+void Deinitialize( GarrysMod::Lua::ILuaBase *LUA )
 {
 	LUA->PushNil( );
 	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "filesystem" );

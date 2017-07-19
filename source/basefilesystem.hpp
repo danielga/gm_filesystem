@@ -118,13 +118,6 @@ public:
 	FileType_t m_type;
 	FILE *m_pFile;
 	CBaseFileSystem *m_fs;
-
-	enum
-	{
-		MAGIC = 'CFHa',
-		FREE_MAGIC = 'FreM'
-	};
-
 	uint32_t m_nMagic;
 };
 

@@ -22,30 +22,6 @@
 
 #endif
 
-/*
-// Some code for obtaining lists of addons, gamemodes, games and legacy addons.
-
-Addon::FileSystem *addons = fsystem->Addons( );
-const std::list<IAddonSystem::Information> &alist = addons->GetList( );
-if( alist.size( ) > 0 )
-const IAddonSystem::Information &first = alist.front( );
-
-Gamemode::System *gamemodes = fsystem->Gamemodes( );
-const std::list<IGamemodeSystem::Information> &gmlist = gamemodes->GetList( );
-if( gmlist.size( ) > 0 )
-const IGamemodeSystem::Information &first = gmlist.front( );
-
-GameDepot::System *games = fsystem->Games( );
-const std::list<IGameDepotSystem::Information> &glist = games->GetList( );
-if( glist.size( ) > 0 )
-const IGameDepotSystem::Information &first = glist.front( );
-
-LegacyAddons::System *legacy = fsystem->LegacyAddons( );
-const std::list<ILegacyAddons::Information> &llist = legacy->GetList( );
-if( llist.size( ) > 0 )
-const ILegacyAddons::Information &first = llist.front( );
-*/
-
 namespace filesystem
 {
 
@@ -55,17 +31,17 @@ static std::string dedicated_binary = Helpers::GetBinaryFileName( "dedicated", f
 
 #if defined _WIN32
 
-static const char *FileSystemFactory_sym = "\x55\x8B\xEC\x56\x8B\x75\x08\x68\x2A\x2A\x2A\x2A\x56\xE8";
-static const size_t FileSystemFactory_symlen = 14;
+static const char FileSystemFactory_sym[] = "\x55\x8B\xEC\x68\x2A\x2A\x2A\x2A\xFF\x75\x08\xE8";
+static const size_t FileSystemFactory_symlen = sizeof( FileSystemFactory_sym ) - 1;
 
 #elif defined __linux
 
-static const char *FileSystemFactory_sym = "@_Z17FileSystemFactoryPKcPi";
+static const char FileSystemFactory_sym[] = "@_Z17FileSystemFactoryPKcPi";
 static const size_t FileSystemFactory_symlen = 0;
 
 #elif defined __APPLE__
 
-static const char *FileSystemFactory_sym = "@__Z17FileSystemFactoryPKcPi";
+static const char FileSystemFactory_sym[] = "@__Z17FileSystemFactoryPKcPi";
 static const size_t FileSystemFactory_symlen = 0;
 
 #endif
@@ -239,11 +215,11 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 
 	LUA->CreateTable( );
 
-	LUA->PushString( "filesystem 1.4.0" );
+	LUA->PushString( "filesystem 1.4.1" );
 	LUA->SetField( -2, "Version" );
 
 	// version num follows LuaJIT style, xxyyzz
-	LUA->PushNumber( 10400 );
+	LUA->PushNumber( 10401 );
 	LUA->SetField( -2, "VersionNum" );
 
 	LUA->PushCFunction( Open );

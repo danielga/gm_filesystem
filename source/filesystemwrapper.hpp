@@ -84,7 +84,7 @@ private:
 	static std::unordered_set<std::string> whitelist_pathid[];
 	static std::unordered_map<std::string, std::string> whitelist_writepaths;
 
-	IFileSystem *fsystem;
+	IFileSystem *filesystem;
 	std::string garrysmod_fullpath;
 };
 

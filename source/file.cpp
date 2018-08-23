@@ -11,7 +11,7 @@ namespace file
 {
 
 static const char *metaname = "FileHandle";
-static uint8_t metatype = 255;
+static int32_t metatype = GarrysMod::Lua::Type::NONE;
 static const char *invalid_error = "invalid FileHandle";
 
 struct Container

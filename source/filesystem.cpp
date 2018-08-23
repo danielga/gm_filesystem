@@ -78,13 +78,13 @@ LUA_FUNCTION_STATIC( IsDirectory )
 
 LUA_FUNCTION_STATIC( GetSize )
 {
-	LUA->PushNumber( filesystem.GetSize( LUA->CheckString( 1 ), LUA->CheckString( 2 ) ) );
+	LUA->PushNumber( static_cast<double>( filesystem.GetSize( LUA->CheckString( 1 ), LUA->CheckString( 2 ) ) ) );
 	return 1;
 }
 
 LUA_FUNCTION_STATIC( GetTime )
 {
-	LUA->PushNumber( filesystem.GetTime( LUA->CheckString( 1 ), LUA->CheckString( 2 ) ) );
+	LUA->PushNumber( static_cast<double>( filesystem.GetTime( LUA->CheckString( 1 ), LUA->CheckString( 2 ) ) ) );
 	return 1;
 }
 

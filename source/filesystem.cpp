@@ -18,7 +18,7 @@
 
 #if defined FILESYSTEM_SERVER
 
-#include <symbolfinder.hpp>
+#include <scanning/symbolfinder.hpp>
 
 #endif
 

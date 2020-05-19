@@ -41,7 +41,7 @@ std::unordered_set<std::string> Wrapper::whitelist_pathid[] = {
 std::unordered_map<std::string, std::string> Wrapper::whitelist_writepaths;
 
 Wrapper::Wrapper( ) :
-	fsystem( nullptr )
+	filesystem( nullptr )
 { }
 
 Wrapper::~Wrapper( )
@@ -49,11 +49,11 @@ Wrapper::~Wrapper( )
 
 bool Wrapper::Initialize( IFileSystem *fsinterface )
 {
-	fsystem = fsinterface;
+	filesystem = fsinterface;
 
 	{
 		char fullpath[max_tempbuffer_len] = { 0 };
-		int32_t len = fsystem->GetSearchPath_safe( "DEFAULT_WRITE_PATH", false, fullpath ) - 1;
+		int32_t len = filesystem->GetSearchPath_safe( "DEFAULT_WRITE_PATH", false, fullpath ) - 1;
 		if( len <= 0 )
 			return false;
 
@@ -67,7 +67,7 @@ bool Wrapper::Initialize( IFileSystem *fsinterface )
 		const std::unordered_set<std::string> &whitelist = whitelist_pathid[static_cast<size_t>( WhitelistWrite )];
 		for( auto it = whitelist.begin( ); it != whitelist.end( ); ++it )
 		{
-			int32_t len = fsystem->GetSearchPath_safe( it->c_str( ), false, searchpath ) - 1;
+			int32_t len = filesystem->GetSearchPath_safe( it->c_str( ), false, searchpath ) - 1;
 			if( len <= 0 )
 				return false;
 
@@ -93,13 +93,13 @@ file::Base *Wrapper::Open( const std::string &fpath, const std::string &opts, co
 		!VerifyExtension( filepath, wtype ) )
 		return nullptr;
 
-	FileHandle_t fh = fsystem->Open( filepath.c_str( ), options.c_str( ), pathid.c_str( ) );
+	FileHandle_t fh = filesystem->Open( filepath.c_str( ), options.c_str( ), pathid.c_str( ) );
 	if( fh == nullptr )
 		return nullptr;
 
-	file::Base *f = new( std::nothrow ) file::Valve( fsystem, fh );
+	file::Base *f = new( std::nothrow ) file::Valve( filesystem, fh );
 	if( f == nullptr )
-		fsystem->Close( fh );
+		filesystem->Close( fh );
 
 	return f;
 }
@@ -113,7 +113,7 @@ bool Wrapper::Exists( const std::string &p, const std::string &pid ) const
 		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
 		return false;
 
-	return fsystem->FileExists( path.c_str( ), pathid.c_str( ) );
+	return filesystem->FileExists( path.c_str( ), pathid.c_str( ) );
 }
 
 bool Wrapper::IsDirectory( const std::string &p, const std::string &pid ) const
@@ -125,7 +125,7 @@ bool Wrapper::IsDirectory( const std::string &p, const std::string &pid ) const
 		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
 		return false;
 
-	return fsystem->IsDirectory( path.c_str( ), pathid.c_str( ) );
+	return filesystem->IsDirectory( path.c_str( ), pathid.c_str( ) );
 }
 
 uint64_t Wrapper::GetSize( const std::string &fpath, const std::string &pid ) const
@@ -137,7 +137,7 @@ uint64_t Wrapper::GetSize( const std::string &fpath, const std::string &pid ) co
 		!IsPathAllowed( filepath, pathid, WhitelistRead, nonascii ) )
 		return 0;
 
-	return fsystem->Size( filepath.c_str( ), pathid.c_str( ) );
+	return filesystem->Size( filepath.c_str( ), pathid.c_str( ) );
 }
 
 uint64_t Wrapper::GetTime( const std::string &p, const std::string &pid ) const
@@ -149,7 +149,7 @@ uint64_t Wrapper::GetTime( const std::string &p, const std::string &pid ) const
 		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
 		return false;
 
-	return fsystem->GetPathTime( path.c_str( ), pathid.c_str( ) );
+	return filesystem->GetPathTime( path.c_str( ), pathid.c_str( ) );
 }
 
 bool Wrapper::Rename( const std::string &pold, const std::string &pnew, const std::string &pid )
@@ -162,16 +162,16 @@ bool Wrapper::Rename( const std::string &pold, const std::string &pnew, const st
 		!IsPathAllowed( pathnew, pathid, WhitelistWrite, nonascii ) )
 		return false;
 
-	if( fsystem->IsDirectory( pathold.c_str( ), pathid.c_str( ) ) )
+	if( filesystem->IsDirectory( pathold.c_str( ), pathid.c_str( ) ) )
 	{
 		char fullpathold[max_tempbuffer_len] = { 0 };
-		fsystem->RelativePathToFullPath_safe( pathold.c_str( ), pathid.c_str( ), fullpathold );
+		filesystem->RelativePathToFullPath_safe( pathold.c_str( ), pathid.c_str( ), fullpathold );
 		char fullpathnew[max_tempbuffer_len] = { 0 };
-		fsystem->RelativePathToFullPath_safe( pathnew.c_str( ), pathid.c_str( ), fullpathnew );
+		filesystem->RelativePathToFullPath_safe( pathnew.c_str( ), pathid.c_str( ), fullpathnew );
 		return rename( fullpathold, fullpathnew ) == 0;
 	}
 
-	return fsystem->RenameFile( pathold.c_str( ), pathnew.c_str( ), pathid.c_str( ) );
+	return filesystem->RenameFile( pathold.c_str( ), pathnew.c_str( ), pathid.c_str( ) );
 }
 
 bool Wrapper::Remove( const std::string &p, const std::string &pid )
@@ -183,17 +183,17 @@ bool Wrapper::Remove( const std::string &p, const std::string &pid )
 		!IsPathAllowed( path, pathid, WhitelistWrite, nonascii ) )
 		return false;
 
-	if( fsystem->IsDirectory( path.c_str( ), pathid.c_str( ) ) )
+	if( filesystem->IsDirectory( path.c_str( ), pathid.c_str( ) ) )
 	{
 		char fullpath[max_tempbuffer_len] = { 0 };
-		fsystem->RelativePathToFullPath( path.c_str( ), pathid.c_str( ), fullpath, sizeof( fullpath ) );
+		filesystem->RelativePathToFullPath( path.c_str( ), pathid.c_str( ), fullpath, sizeof( fullpath ) );
 		return rmdir( fullpath ) == 0;
 	}
 
-	if( fsystem->FileExists( path.c_str( ), pathid.c_str( ) ) )
+	if( filesystem->FileExists( path.c_str( ), pathid.c_str( ) ) )
 	{
-		fsystem->RemoveFile( path.c_str( ), pathid.c_str( ) );
-		return !fsystem->FileExists( path.c_str( ), pathid.c_str( ) );
+		filesystem->RemoveFile( path.c_str( ), pathid.c_str( ) );
+		return !filesystem->FileExists( path.c_str( ), pathid.c_str( ) );
 	}
 
 	return false;
@@ -208,8 +208,8 @@ bool Wrapper::MakeDirectory( const std::string &p, const std::string &pid )
 		!IsPathAllowed( path, pathid, WhitelistWrite, nonascii ) )
 		return false;
 
-	fsystem->CreateDirHierarchy( path.c_str( ), pathid.c_str( ) );
-	return fsystem->IsDirectory( path.c_str( ), pathid.c_str( ) );
+	filesystem->CreateDirHierarchy( path.c_str( ), pathid.c_str( ) );
+	return filesystem->IsDirectory( path.c_str( ), pathid.c_str( ) );
 }
 
 std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
@@ -227,24 +227,24 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 		return std::make_pair( files, directories );
 
 	FileFindHandle_t handle = FILESYSTEM_INVALID_FIND_HANDLE;
-	const char *path = fsystem->FindFirstEx( filename.c_str( ), pathid.c_str( ), &handle );
+	const char *path = filesystem->FindFirstEx( filename.c_str( ), pathid.c_str( ), &handle );
 	while( path != nullptr )
 	{
-		if( fsystem->FindIsDirectory( handle ) )
+		if( filesystem->FindIsDirectory( handle ) )
 			directories.insert( path );
 		else
 			files.insert( path );
 
-		path = fsystem->FindNext( handle );
+		path = filesystem->FindNext( handle );
 	}
 
-	fsystem->FindClose( handle );
+	filesystem->FindClose( handle );
 	return std::make_pair( files, directories );
 }
 
 std::unordered_map< std::string, std::set<std::string> > Wrapper::GetSearchPaths( ) const
 {
-	CBaseFileSystem *fsystem = reinterpret_cast<CBaseFileSystem *>( this->fsystem );
+	CBaseFileSystem *fsystem = reinterpret_cast<CBaseFileSystem *>( this->filesystem );
 
 	std::unordered_map< std::string, std::set<std::string> > searchpaths;
 
@@ -277,7 +277,7 @@ std::set<std::string> Wrapper::GetSearchPaths( const std::string &pathid ) const
 	std::set<std::string> searchpaths;
 
 	char paths[max_tempbuffer_len] = { 0 };
-	const int32_t len = fsystem->GetSearchPath_safe( pathid.c_str( ), true, paths ) - 1;
+	const int32_t len = filesystem->GetSearchPath_safe( pathid.c_str( ), true, paths ) - 1;
 	if( len <= 0 )
 		return searchpaths;
 
@@ -305,7 +305,7 @@ bool Wrapper::AddSearchPath( const std::string &p, const std::string &pid )
 		return false;
 
 	directory.insert( 0, garrysmod_fullpath );
-	fsystem->AddSearchPath( directory.c_str( ), pathid.c_str( ) );
+	filesystem->AddSearchPath( directory.c_str( ), pathid.c_str( ) );
 	return true;
 }
 
@@ -320,7 +320,7 @@ bool Wrapper::RemoveSearchPath( const std::string &p, const std::string &pid )
 		return false;
 
 	directory.insert( 0, garrysmod_fullpath );
-	return fsystem->RemoveSearchPath( directory.c_str( ), pathid.c_str( ) );
+	return filesystem->RemoveSearchPath( directory.c_str( ), pathid.c_str( ) );
 }
 
 bool Wrapper::IsPathIDAllowed( std::string &pathid, WhitelistType whitelist_type ) const
@@ -342,7 +342,7 @@ bool Wrapper::FixupFilePath( std::string &filepath, const std::string &pathid ) 
 	{
 		const std::string tpath = filepath;
 		filepath.resize( max_tempbuffer_len );
-		if( !fsystem->FullPathToRelativePathEx( tpath.c_str( ), pathid.c_str( ), &filepath[0], filepath.size( ) ) )
+		if( !filesystem->FullPathToRelativePathEx( tpath.c_str( ), pathid.c_str( ), &filepath[0], filepath.size( ) ) )
 			return false;
 
 		if( filepath.compare( 0, 3, ".." CORRECT_PATH_SEPARATOR_S ) == 0 )

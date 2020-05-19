@@ -1,5 +1,6 @@
 # gm\_filesystem
 
+[![Build Status](https://metamann.visualstudio.com/GitHub%20danielga/_apis/build/status/danielga.gm_filesystem?branchName=master)](https://metamann.visualstudio.com/GitHub%20danielga/_build/latest?definitionId=10&branchName=master)  
 A Garry's Mod module that adds an advanced filesystem interface.
 
 ## Compiling

@@ -1,17 +1,11 @@
-#include <GarrysMod/Lua/Interface.h>
-#include <file.hpp>
-#include <filesystemwrapper.hpp>
-#include <interface.h>
+#include "file.hpp"
+#include "filesystemwrapper.hpp"
+
 #include <filesystem.h>
 
-#if defined max || defined min
+#include <GarrysMod/Lua/Interface.h>
+#include <GarrysMod/FactoryLoader.hpp>
 
-#undef max
-#undef min
-
-#endif
-
-#include <GarrysMod/Interfaces.hpp>
 #include <cstdint>
 #include <string>
 #include <tuple>
@@ -27,7 +21,7 @@ namespace filesystem
 
 #if defined FILESYSTEM_SERVER
 
-static std::string dedicated_binary = Helpers::GetBinaryFileName( "dedicated", false, true, "bin/" );
+static SourceSDK::ModuleLoader dedicated_loader( "dedicated" );
 
 #if defined _WIN32
 
@@ -48,7 +42,7 @@ static const size_t FileSystemFactory_symlen = 0;
 
 #elif defined FILESYSTEM_CLIENT
 
-static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio", false, false );
+static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio" );
 
 #endif
 
@@ -115,7 +109,7 @@ LUA_FUNCTION_STATIC( Find )
 	size_t nfiles = 0;
 	for( auto it = files.begin( ); it != files.end( ); ++it )
 	{
-		LUA->PushNumber( ++nfiles );
+		LUA->PushNumber( static_cast<double>( ++nfiles ) );
 		LUA->PushString( it->c_str( ) );
 		LUA->SetTable( -3 );
 	}
@@ -124,7 +118,7 @@ LUA_FUNCTION_STATIC( Find )
 	size_t ndirs = 0;
 	for( auto it = directories.begin( ); it != directories.end( ); ++it )
 	{
-		LUA->PushNumber( ++ndirs );
+		LUA->PushNumber( static_cast<double>( ++ndirs ) );
 		LUA->PushString( it->c_str( ) );
 		LUA->SetTable( -3 );
 	}
@@ -148,7 +142,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 			const std::set<std::string> &paths = it->second;
 			for( auto it2 = paths.begin( ); it2 != paths.end( ); ++it2 )
 			{
-				LUA->PushNumber( ++npaths );
+				LUA->PushNumber( static_cast<double>( ++npaths ) );
 				LUA->PushString( it2->c_str( ) );
 				LUA->SetTable( -3 );
 			}
@@ -164,7 +158,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 		size_t npaths = 0;
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
 		{
-			LUA->PushNumber( ++npaths );
+			LUA->PushNumber( static_cast<double>( ++npaths ) );
 			LUA->PushString( it->c_str( ) );
 			LUA->SetTable( -3 );
 		}
@@ -192,8 +186,8 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 
 	SymbolFinder symfinder;
 
-	CreateInterfaceFn factory = reinterpret_cast<CreateInterfaceFn>( symfinder.ResolveOnBinary(
-		dedicated_binary.c_str( ), FileSystemFactory_sym, FileSystemFactory_symlen
+	CreateInterfaceFn factory = reinterpret_cast<CreateInterfaceFn>( symfinder.Resolve(
+		dedicated_loader.GetModule( ), FileSystemFactory_sym, FileSystemFactory_symlen
 	) );
 	if( factory == nullptr )
 		LUA->ThrowError( "unable to retrieve dedicated factory" );

@@ -1,4 +1,5 @@
 #include <cstdint>
+
 #include <refcount.h>
 #include <utlsymbol.h>
 #include <utlstring.h>
@@ -7,6 +8,7 @@
 #include <byteswap.h>
 #include <UtlSortVector.h>
 #include <filesystem.h>
+
 #include <GarrysMod/Addon.h>
 #include <GarrysMod/LegacyAddons.h>
 #include <GarrysMod/Gamemode.h>
@@ -178,7 +180,7 @@ public:
 	void *m_pPreloadData; // 4b
 	CByteswap m_swap; // 4b
 
-	const Placeholder4 placeholders[13];
+	const Placeholder4 placeholders[13] = { };
 };
 
 class WilloxHallOfShame

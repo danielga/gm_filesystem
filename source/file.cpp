@@ -1,7 +1,9 @@
+#include "file.hpp"
+#include "filebase.hpp"
+
 #include <GarrysMod/Lua/Interface.h>
-#include <file.hpp>
-#include <filebase.hpp>
 #include <lua.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -232,7 +234,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 	{
 		case 8:
 		{
-			if( file->Tell( ) + sizeof( int8_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( int8_t ) ) >= file->Size( ) )
 				return 0;
 
 			int8_t num = 0;
@@ -243,7 +245,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 		case 16:
 		{
-			if( file->Tell( ) + sizeof( int16_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( int16_t ) ) >= file->Size( ) )
 				return 0;
 
 			int16_t num = 0;
@@ -254,7 +256,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 		case 32:
 		{
-			if( file->Tell( ) + sizeof( int32_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( int32_t ) ) >= file->Size( ) )
 				return 0;
 
 			int32_t num = 0;
@@ -265,7 +267,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 
 		case 64:
 		{
-			if( file->Tell( ) + sizeof( int64_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( int64_t ) ) >= file->Size( ) )
 				return 0;
 
 			int64_t num = 0;
@@ -292,7 +294,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 	{
 		case 8:
 		{
-			if( file->Tell( ) + sizeof( uint8_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( uint8_t ) ) >= file->Size( ) )
 				return 0;
 
 			uint8_t num = 0;
@@ -303,7 +305,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 		case 16:
 		{
-			if( file->Tell( ) + sizeof( uint16_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( uint16_t ) ) >= file->Size( ) )
 				return 0;
 
 			uint16_t num = 0;
@@ -314,7 +316,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 		case 32:
 		{
-			if( file->Tell( ) + sizeof( uint32_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( uint32_t ) ) >= file->Size( ) )
 				return 0;
 
 			uint32_t num = 0;
@@ -325,7 +327,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 
 		case 64:
 		{
-			if( file->Tell( ) + sizeof( uint64_t ) >= file->Size( ) )
+			if( file->Tell( ) + static_cast<int64_t>( sizeof( uint64_t ) ) >= file->Size( ) )
 				return 0;
 
 			uint64_t num = 0;
@@ -346,7 +348,7 @@ LUA_FUNCTION_STATIC( ReadFloat )
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
 
-	if( file->Tell( ) + sizeof( float ) >= file->Size( ) )
+	if( file->Tell( ) + static_cast<int64_t>( sizeof( float ) ) >= file->Size( ) )
 		return 0;
 
 	float num = 0.0f;
@@ -360,7 +362,7 @@ LUA_FUNCTION_STATIC( ReadDouble )
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
 
-	if( file->Tell( ) + sizeof( double ) >= file->Size( ) )
+	if( file->Tell( ) + static_cast<int64_t>( sizeof( double ) ) >= file->Size( ) )
 		return 0;
 
 	double num = 0.0;
@@ -391,7 +393,7 @@ LUA_FUNCTION_STATIC( WriteString )
 
 	char z = '\0';
 	if( len != 0 )
-		LUA->PushNumber( file->Write( str, len ) + file->Write( &z, 1 ) );
+		LUA->PushNumber( static_cast<double>( file->Write( str, len ) + file->Write( &z, 1 ) ) );
 	else
 		LUA->PushNumber( 0.0 );
 

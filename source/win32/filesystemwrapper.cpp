@@ -1,13 +1,13 @@
-#include <filesystemwrapper.hpp>
-#include <filevalve.hpp>
+#include "filesystemwrapper.hpp"
+#include "filevalve.hpp"
 #include "filestream.hpp"
 #include "unicode.hpp"
+#include "basefilesystem.hpp"
+
 #include <cstring>
 #include <cctype>
 #include <algorithm>
-#include <basefilesystem.hpp>
-#include <utllinkedlist.h>
-#include <strtools.h>
+
 #include <direct.h>
 #include <Windows.h>
 #include <Shlobj.h>
@@ -540,7 +540,7 @@ bool Wrapper::FixupFilePath( std::string &filepath, const std::string &pathid ) 
 	{
 		const std::string tpath = filepath;
 		filepath.resize( max_tempbuffer_len );
-		if( !filesystem->FullPathToRelativePathEx( tpath.c_str( ), pathid.c_str( ), &filepath[0], filepath.size( ) ) )
+		if( !filesystem->FullPathToRelativePathEx( tpath.c_str( ), pathid.c_str( ), &filepath[0], static_cast<int>( filepath.size( ) ) ) )
 			return false;
 
 		if( filepath.compare( 0, 3, ".." CORRECT_PATH_SEPARATOR_S ) == 0 )

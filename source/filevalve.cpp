@@ -1,11 +1,10 @@
 #include "filevalve.hpp"
-
-#include <filesystem.h>
+#include "basefilesystem.hpp"
 
 namespace file
 {
 
-Valve::Valve( IFileSystem *fsystem, FileHandle_t handle ) :
+Valve::Valve( CBaseFileSystem *fsystem, FileHandle_t handle ) :
 	filesystem( fsystem ),
 	filehandle( handle )
 { }

@@ -130,7 +130,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 {
 	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::NIL )
 	{
-		std::unordered_map< std::string, std::set<std::string> > searchpaths = filesystem.GetSearchPaths( );
+		const std::unordered_map<std::string, std::set<std::string>> searchpaths = filesystem.GetSearchPaths( );
 
 		LUA->CreateTable( );
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
@@ -152,7 +152,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	}
 	else
 	{
-		std::set<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
+		const std::set<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
 
 		LUA->CreateTable( );
 		size_t npaths = 0;
@@ -192,13 +192,13 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 	if( factory == nullptr )
 		LUA->ThrowError( "unable to retrieve dedicated factory" );
 
-	IFileSystem *fsystem = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
+	CBaseFileSystem *fsystem = static_cast<CBaseFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
 	if( fsystem == nullptr )
 		LUA->ThrowError( "failed to initialize IFileSystem" );
 
 #elif defined FILESYSTEM_CLIENT
 
-	IFileSystem *fsystem = filesystem_loader.GetInterface<IFileSystem>( FILESYSTEM_INTERFACE_VERSION );
+	CBaseFileSystem *fsystem = filesystem_loader.GetInterface<CBaseFileSystem>( FILESYSTEM_INTERFACE_VERSION );
 	if( fsystem == nullptr )
 		LUA->ThrowError( "unable to initialize IFileSystem" );
 

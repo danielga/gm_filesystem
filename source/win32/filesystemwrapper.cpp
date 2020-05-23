@@ -17,14 +17,41 @@
 namespace filesystem
 {
 
-const size_t Wrapper::max_tempbuffer_len = 16384;
-std::unordered_set<std::string> Wrapper::whitelist_extensions;
-std::unordered_set<std::string> Wrapper::whitelist_pathid[3];
+const size_t Wrapper::max_tempbuffer_len = 2048;
+const std::unordered_set<std::string> Wrapper::whitelist_extensions = {
+	// garry's mod
+	"lua", "gma", "cache",
+	// data
+	"txt", "dat",
+	// valve
+	"nav", "ain", "vpk", "vtf", "vmt", "mdl", "vtx", "phy", "vvd", "pcf", "bsp",
+	// image
+	"tga", "jpg", "png",
+	// audio
+	"wav", "mp3",
+	// video
+	"mp4", "ogg", "avi", "mkv",
+	// fonts
+	"ttf", "ttc",
+	// assorted
+	"tmp", "md", "db", "inf"
+};
+const std::unordered_set<std::string> Wrapper::whitelist_pathid[3] = {
+	{
+		"data", "download", "lua", "lcl", "lsv", "game", "garrysmod", "gamebin", "mod",
+		"base_path", "executable_path", "default_write_path"
+	}, // Read
+	{ "data", "download" }, // Write
+	{ "game", "lcl" } // SearchPath
+};
 std::unordered_map<std::string, std::string> Wrapper::whitelist_writepaths;
 
 // BAD WINDOWS, YOU KNOTTY BOY
-static std::unordered_set<uint32_t> blacklist_characters;
-static std::unordered_set<std::string> blacklist_filenames;
+static const std::unordered_set<uint32_t> blacklist_characters = { '<', '>', ':', '"', '/', '|', '?' };
+static const std::unordered_set<std::string> blacklist_filenames = {
+	"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+	"COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+};
 
 inline void ToLower( std::string &source )
 {
@@ -41,67 +68,8 @@ Wrapper::Wrapper( ) :
 Wrapper::~Wrapper( )
 { }
 
-bool Wrapper::Initialize( IFileSystem *fsinterface )
+bool Wrapper::Initialize( CBaseFileSystem *fsinterface )
 {
-	if( whitelist_extensions.empty( ) )
-	{
-		const std::string extensions[] = {
-			// garry's mod
-			"lua", "gma", "cache",
-			// data
-			"txt", "dat",
-			// valve
-			"nav", "ain", "vpk", "vtf", "vmt", "mdl", "vtx", "phy", "vvd", "pcf", "bsp",
-			// image
-			"tga", "jpg", "png",
-			// audio
-			"wav", "mp3",
-			// video
-			"mp4", "ogg", "avi", "mkv",
-			// fonts
-			"ttf", "ttc",
-			// assorted
-			"tmp", "md", "db", "inf"
-		};
-		whitelist_extensions.insert( extensions, extensions + sizeof( extensions ) / sizeof( *extensions ) );
-	}
-
-	if( whitelist_pathid[0].empty( ) )
-	{
-		const std::string pathids0[] = {
-			"data", "download", "lua", "lcl", "lsv", "game", "garrysmod", "gamebin", "mod",
-			"base_path", "executable_path", "default_write_path"
-		}; // Read
-		whitelist_pathid[0].insert( pathids0, pathids0 + sizeof( pathids0 ) / sizeof( *pathids0 ) );
-	}
-
-	if( whitelist_pathid[1].empty( ) )
-	{
-		const std::string pathids1[] = { "data", "download" }; // Write
-		whitelist_pathid[1].insert( pathids1, pathids1 + sizeof( pathids1 ) / sizeof( *pathids1 ) );
-	}
-
-	if( whitelist_pathid[2].empty( ) )
-	{
-		const std::string pathids2[] = { "game", "lcl" }; // SearchPath
-		whitelist_pathid[2].insert( pathids2, pathids2 + sizeof( pathids2 ) / sizeof( *pathids2 ) );
-	}
-
-	if( blacklist_characters.empty( ) )
-	{
-		const uint32_t characters[] = { '<', '>', ':', '"', '/', '|', '?' };
-		blacklist_characters.insert( characters, characters + sizeof( characters ) / sizeof( *characters ) );
-	}
-
-	if( blacklist_filenames.empty( ) )
-	{
-		const std::string filenames[] = {
-			"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
-			"COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
-		};
-		blacklist_filenames.insert( filenames, filenames + sizeof( filenames ) / sizeof( *filenames ) );
-	}
-
 	filesystem = fsinterface;
 
 	{
@@ -117,7 +85,7 @@ bool Wrapper::Initialize( IFileSystem *fsinterface )
 	if( whitelist_writepaths.empty( ) )
 	{
 		char searchpath[max_tempbuffer_len] = { 0 };
-		const std::unordered_set<std::string> &whitelist = whitelist_pathid[static_cast<size_t>( WhitelistWrite )];
+		const std::unordered_set<std::string> &whitelist = whitelist_pathid[static_cast<size_t>( WhitelistType::Write )];
 		for( auto it = whitelist.begin( ); it != whitelist.end( ); ++it )
 		{
 			int32_t len = filesystem->GetSearchPath_safe( it->c_str( ), false, searchpath ) - 1;
@@ -137,7 +105,7 @@ file::Base *Wrapper::Open( const std::string &fpath, const std::string &opts, co
 
 	ToLower( options );
 	WhitelistType wtype = options.find_first_of( "wa+" ) != options.npos ?
-		WhitelistWrite : WhitelistRead;
+		WhitelistType::Write : WhitelistType::Read;
 
 	bool nonascii = false;
 	if( !IsPathIDAllowed( pathid, wtype ) ||
@@ -166,7 +134,7 @@ file::Base *Wrapper::Open( const std::string &fpath, const std::string &opts, co
 	if( fh == nullptr )
 		return nullptr;
 
-	file::Base *f = new( std::nothrow ) file::Valve( reinterpret_cast<IFileSystem *>( filesystem ), fh );
+	file::Base *f = new( std::nothrow ) file::Valve( filesystem, fh );
 	if( f == nullptr )
 		filesystem->Close( fh );
 
@@ -178,13 +146,13 @@ bool Wrapper::Exists( const std::string &p, const std::string &pid ) const
 	std::string path = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistRead ) ||
-		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Read ) ||
+		!IsPathAllowed( path, pathid, WhitelistType::Read, nonascii ) )
 		return false;
 
 	if( nonascii )
 	{
-		path = GetPath( path, pathid, WhitelistRead );
+		path = GetPath( path, pathid, WhitelistType::Read );
 		std::wstring wpath = Unicode::UTF8::ToUTF16( path.begin( ), path.end( ) );
 		return GetFileAttributesW( wpath.c_str( ) ) != INVALID_FILE_ATTRIBUTES;
 	}
@@ -197,13 +165,13 @@ bool Wrapper::IsDirectory( const std::string &p, const std::string &pid ) const
 	std::string path = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistRead ) ||
-		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Read ) ||
+		!IsPathAllowed( path, pathid, WhitelistType::Read, nonascii ) )
 		return false;
 
 	if( nonascii )
 	{
-		path = GetPath( path, pathid, WhitelistRead );
+		path = GetPath( path, pathid, WhitelistType::Read );
 		std::wstring wpath = Unicode::UTF8::ToUTF16( path.begin( ), path.end( ) );
 		WIN32_FILE_ATTRIBUTE_DATA file_data;
 		if( !GetFileAttributesExW( wpath.c_str( ), GetFileExInfoStandard, &file_data ) )
@@ -220,13 +188,13 @@ uint64_t Wrapper::GetSize( const std::string &fpath, const std::string &pid ) co
 	std::string filepath = fpath, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistRead ) ||
-		!IsPathAllowed( filepath, pathid, WhitelistRead, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Read ) ||
+		!IsPathAllowed( filepath, pathid, WhitelistType::Read, nonascii ) )
 		return 0;
 
 	if( nonascii )
 	{
-		filepath = GetPath( filepath, pathid, WhitelistRead );
+		filepath = GetPath( filepath, pathid, WhitelistType::Read );
 		std::wstring wpath = Unicode::UTF8::ToUTF16( filepath.begin( ), filepath.end( ) );
 		WIN32_FILE_ATTRIBUTE_DATA file_data;
 		if( !GetFileAttributesExW( wpath.c_str( ), GetFileExInfoStandard, &file_data ) )
@@ -245,13 +213,13 @@ uint64_t Wrapper::GetTime( const std::string &p, const std::string &pid ) const
 	std::string path = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistRead ) ||
-		!IsPathAllowed( path, pathid, WhitelistRead, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Read ) ||
+		!IsPathAllowed( path, pathid, WhitelistType::Read, nonascii ) )
 		return 0;
 
 	if( nonascii )
 	{
-		path = GetPath( path, pathid, WhitelistRead );
+		path = GetPath( path, pathid, WhitelistType::Read );
 		const std::wstring wpath = Unicode::UTF8::ToUTF16( path.begin( ), path.end( ) );
 		WIN32_FILE_ATTRIBUTE_DATA file_data;
 		if( !GetFileAttributesExW( wpath.c_str( ), GetFileExInfoStandard, &file_data ) )
@@ -270,15 +238,15 @@ bool Wrapper::Rename( const std::string &pold, const std::string &pnew, const st
 	std::string pathold = pold, pathnew = pnew, pathid = pid;
 
 	bool nonasciio = false, nonasciin = false;
-	if( !IsPathIDAllowed( pathid, WhitelistWrite ) ||
-		!IsPathAllowed( pathold, pathid, WhitelistWrite, nonasciio ) ||
-		!IsPathAllowed( pathnew, pathid, WhitelistWrite, nonasciin ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Write ) ||
+		!IsPathAllowed( pathold, pathid, WhitelistType::Write, nonasciio ) ||
+		!IsPathAllowed( pathnew, pathid, WhitelistType::Write, nonasciin ) )
 		return false;
 
 	if( nonasciio || nonasciin )
 	{
-		pathold = GetPath( pathold, pathid, WhitelistWrite );
-		pathnew = GetPath( pathnew, pathid, WhitelistWrite );
+		pathold = GetPath( pathold, pathid, WhitelistType::Write );
+		pathnew = GetPath( pathnew, pathid, WhitelistType::Write );
 		const std::wstring wpathold = Unicode::UTF8::ToUTF16( pathold.begin( ), pathold.end( ) );
 		const std::wstring wpathnew = Unicode::UTF8::ToUTF16( pathnew.begin( ), pathnew.end( ) );
 		return MoveFileW( wpathold.c_str( ), wpathnew.c_str( ) ) == 1;
@@ -301,13 +269,13 @@ bool Wrapper::Remove( const std::string &p, const std::string &pid )
 	std::string path = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistWrite ) ||
-		!IsPathAllowed( path, pathid, WhitelistWrite, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Write ) ||
+		!IsPathAllowed( path, pathid, WhitelistType::Write, nonascii ) )
 		return false;
 
 	if( nonascii )
 	{
-		path = GetPath( path, pathid, WhitelistWrite );
+		path = GetPath( path, pathid, WhitelistType::Write );
 		const std::wstring wpath = Unicode::UTF8::ToUTF16( path.begin( ), path.end( ) );
 		return RemoveDirectoryW( wpath.c_str( ) ) == 1;
 	}
@@ -333,13 +301,13 @@ bool Wrapper::MakeDirectory( const std::string &p, const std::string &pid )
 	std::string path = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistWrite ) ||
-		!IsPathAllowed( path, pathid, WhitelistWrite, nonascii ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Write ) ||
+		!IsPathAllowed( path, pathid, WhitelistType::Write, nonascii ) )
 		return false;
 
 	if( nonascii )
 	{
-		path = GetPath( path, pathid, WhitelistWrite );
+		path = GetPath( path, pathid, WhitelistType::Write );
 		const std::wstring wpath = Unicode::UTF8::ToUTF16( path.begin( ), path.end( ) );
 		return SHCreateDirectoryExW( nullptr, wpath.c_str( ), nullptr ) == ERROR_SUCCESS;
 	}
@@ -353,7 +321,7 @@ bool Wrapper::MakeDirectory( const std::string &p, const std::string &pid )
 // Win32 API doesn't search inside VPKs and GMAs (obviously)
 // combining them will duplicate results (broken names so not exactly duplicating)
 // besides doing the search twice on each path
-std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
+std::pair<std::set<std::string>, std::set<std::string>> Wrapper::Find(
 	const std::string &p,
 	const std::string &pid
 ) const
@@ -363,8 +331,8 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 	std::set<std::string> files, directories;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistRead ) ||
-		!IsPathAllowed( filename, pathid, WhitelistRead, nonascii, true ) )
+	if( !IsPathIDAllowed( pathid, WhitelistType::Read ) ||
+		!IsPathAllowed( filename, pathid, WhitelistType::Read, nonascii, true ) )
 		return std::make_pair( files, directories );
 
 	// IFileSystem finding (allows finding inside VPKs, GMAs and what not)
@@ -438,20 +406,18 @@ std::pair< std::set<std::string>, std::set<std::string> > Wrapper::Find(
 	return std::make_pair( files, directories );
 }
 
-std::unordered_map< std::string, std::set<std::string> > Wrapper::GetSearchPaths( ) const
+std::unordered_map<std::string, std::set<std::string>> Wrapper::GetSearchPaths( ) const
 {
-	CBaseFileSystem *fsystem = reinterpret_cast<CBaseFileSystem *>( this->filesystem );
+	std::unordered_map<std::string, std::set<std::string>> searchpaths;
 
-	std::unordered_map< std::string, std::set<std::string> > searchpaths;
-
-	const CUtlLinkedList<CBaseFileSystem::CSearchPath> &m_SearchPaths = fsystem->m_SearchPaths;
-	for( int16_t k = 0; k < m_SearchPaths.Count( ); ++k )
+	const CUtlLinkedList<CBaseFileSystem::CSearchPath> &m_SearchPaths = filesystem->m_SearchPaths;
+	for( uint16_t k = 0; k < m_SearchPaths.Count( ); ++k )
 	{
 		const CBaseFileSystem::CSearchPath &searchpath = m_SearchPaths[k];
-		const CBaseFileSystem::CPathIDInfo *m_pPathIDInfo = searchpath.m_pPathIDInfo;
+		const CBaseFileSystem::CPathIDInfo *pathIDInfo = searchpath.m_pPathIDInfo;
 		if( searchpath.m_pDebugPath == nullptr ||
-			m_pPathIDInfo == nullptr ||
-			m_pPathIDInfo->m_pDebugPathID == nullptr )
+			pathIDInfo == nullptr ||
+			pathIDInfo->m_pDebugPathID == nullptr )
 			continue;
 
 		const WilloxHallOfShame *m_pPackFile = searchpath.m_pPackFile;
@@ -459,10 +425,10 @@ std::unordered_map< std::string, std::set<std::string> > Wrapper::GetSearchPaths
 		{
 			std::string filepath = m_pPackFile->filepath;
 			filepath += ".vpk";
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( filepath );
+			searchpaths[pathIDInfo->m_pDebugPathID].insert( filepath );
 		}
 		else
-			searchpaths[m_pPathIDInfo->m_pDebugPathID].insert( searchpath.m_pDebugPath );
+			searchpaths[pathIDInfo->m_pDebugPathID].insert( searchpath.m_pDebugPath );
 	}
 
 	return searchpaths;
@@ -495,7 +461,7 @@ bool Wrapper::AddSearchPath( const std::string &p, const std::string &pid )
 	std::string directory = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistSearchPath ) ||
+	if( !IsPathIDAllowed( pathid, WhitelistType::SearchPath ) ||
 		!FixupFilePath( directory, "DEFAULT_WRITE_PATH" ) ||
 		!VerifyFilePath( directory, false, nonascii ) ||
 		nonascii )
@@ -511,7 +477,7 @@ bool Wrapper::RemoveSearchPath( const std::string &p, const std::string &pid )
 	std::string directory = p, pathid = pid;
 
 	bool nonascii = false;
-	if( !IsPathIDAllowed( pathid, WhitelistSearchPath ) ||
+	if( !IsPathIDAllowed( pathid, WhitelistType::SearchPath ) ||
 		!FixupFilePath( directory, "DEFAULT_WRITE_PATH" ) ||
 		!VerifyFilePath( directory, false, nonascii ) ||
 		nonascii )
@@ -590,7 +556,7 @@ bool Wrapper::VerifyFilePath( const std::string &filepath, bool find, bool &nona
 bool Wrapper::VerifyExtension( const std::string &filepath, WhitelistType whitelist_type ) const
 {
 	const char *extension = V_GetFileExtension( filepath.c_str( ) );
-	if( whitelist_type == WhitelistWrite && extension != nullptr )
+	if( whitelist_type == WhitelistType::Write && extension != nullptr )
 	{
 		std::string ext = extension;
 		ToLower( ext );
@@ -621,7 +587,7 @@ std::string Wrapper::GetPath(
 ) const
 {
 	char fullpath[max_tempbuffer_len] = { 0 };
-	if( wtype == WhitelistRead )
+	if( wtype == WhitelistType::Read )
 	{
 		bool notfound = true;
 		const std::set<std::string> searchpaths = GetSearchPaths( pathid );
@@ -639,7 +605,7 @@ std::string Wrapper::GetPath(
 		if( notfound )
 			return "";
 	}
-	else if( wtype == WhitelistWrite )
+	else if( wtype == WhitelistType::Write )
 	{
 		const auto searchpath = whitelist_writepaths.find( pathid );
 		if( searchpath == whitelist_writepaths.end( ) )

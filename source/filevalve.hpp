@@ -3,7 +3,7 @@
 #include "filebase.hpp"
 
 typedef void *FileHandle_t;
-class IFileSystem;
+class CBaseFileSystem;
 
 namespace file
 {
@@ -11,7 +11,7 @@ namespace file
 class Valve : public Base
 {
 public:
-	Valve( IFileSystem *fsystem, FileHandle_t handle );
+	Valve( CBaseFileSystem *fsystem, FileHandle_t handle );
 	~Valve( );
 
 	bool Valid( ) const;
@@ -30,7 +30,7 @@ public:
 	size_t Write( const void *buffer, size_t len );
 
 private:
-	IFileSystem *filesystem;
+	CBaseFileSystem *filesystem;
 	FileHandle_t filehandle;
 };
 

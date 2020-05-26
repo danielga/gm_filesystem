@@ -260,11 +260,11 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 
 	LUA->CreateTable( );
 
-	LUA->PushString( "filesystem 1.4.2" );
+	LUA->PushString( "filesystem 1.4.3" );
 	LUA->SetField( -2, "Version" );
 
 	// version num follows LuaJIT style, xxyyzz
-	LUA->PushNumber( 10402 );
+	LUA->PushNumber( 10403 );
 	LUA->SetField( -2, "VersionNum" );
 
 	LUA->PushCFunction( Open );

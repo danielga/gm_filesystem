@@ -257,13 +257,12 @@ std::unordered_map<std::string, std::set<std::string>> Wrapper::GetSearchPaths( 
 			pathIDInfo->m_pDebugPathID == nullptr )
 			continue;
 
-		const WilloxHallOfShame *m_pPackFile = searchpath.m_pPackFile;
-		if( m_pPackFile != nullptr )
-		{
-			std::string filepath = m_pPackFile->filepath;
-			filepath += ".vpk";
-			searchpaths[pathIDInfo->m_pDebugPathID].insert( filepath );
-		}
+		const auto packFile = searchpath.m_pPackFile;
+		const auto packFile2 = searchpath.m_pPackFile2;
+		if( packFile != nullptr )
+			searchpaths[pathIDInfo->m_pDebugPathID].insert( packFile->m_ZipName.Get( ) );
+		else if( packFile2 != nullptr )
+			searchpaths[pathIDInfo->m_pDebugPathID].insert( packFile2->m_pszFullPathName );
 		else
 			searchpaths[pathIDInfo->m_pDebugPathID].insert( searchpath.m_pDebugPath );
 	}

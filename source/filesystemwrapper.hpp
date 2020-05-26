@@ -7,7 +7,6 @@
 #include <unordered_set>
 #include <unordered_map>
 
-class IFileSystem;
 class CBaseFileSystem;
 
 namespace file
@@ -26,7 +25,7 @@ public:
 	Wrapper( );
 	~Wrapper( );
 
-	bool Initialize( IFileSystem *fsinterface );
+	bool Initialize( CBaseFileSystem *fsinterface );
 
 	file::Base *Open(
 		const std::string &filepath,
@@ -44,22 +43,22 @@ public:
 	bool Remove( const std::string &path, const std::string &pathid );
 	bool MakeDirectory( const std::string &path, const std::string &pathid );
 
-	std::pair< std::set<std::string>, std::set<std::string> > Find(
+	std::pair<std::set<std::string>, std::set<std::string>> Find(
 		const std::string &path,
 		const std::string &pathid
 	) const;
 
-	std::unordered_map< std::string, std::set<std::string> > GetSearchPaths( ) const;
+	std::unordered_map<std::string, std::set<std::string>> GetSearchPaths( ) const;
 	std::set<std::string> GetSearchPaths( const std::string &pathid ) const;
 	bool AddSearchPath( const std::string &path, const std::string &pathid );
 	bool RemoveSearchPath( const std::string &path, const std::string &pathid );
 
 private:
-	enum WhitelistType
+	enum class WhitelistType
 	{
-		WhitelistRead,
-		WhitelistWrite,
-		WhitelistSearchPath
+		Read,
+		Write,
+		SearchPath
 	};
 
 	bool IsPathIDAllowed( std::string &pathid, WhitelistType whitelist_type ) const;
@@ -80,11 +79,11 @@ private:
 	) const;
 
 	static const size_t max_tempbuffer_len;
-	static std::unordered_set<std::string> whitelist_extensions;
-	static std::unordered_set<std::string> whitelist_pathid[];
+	static const std::unordered_set<std::string> whitelist_extensions;
+	static const std::unordered_set<std::string> whitelist_pathid[];
 	static std::unordered_map<std::string, std::string> whitelist_writepaths;
 
-	IFileSystem *filesystem;
+	CBaseFileSystem *filesystem;
 	std::string garrysmod_fullpath;
 };
 

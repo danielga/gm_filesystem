@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #if defined FILESYSTEM_SERVER
 
@@ -22,27 +23,47 @@ namespace filesystem
 #if defined FILESYSTEM_SERVER
 
 static SourceSDK::ModuleLoader dedicated_loader( "dedicated" );
-
-#if defined _WIN32
-
-static const char FileSystemFactory_sym[] = "\x55\x8B\xEC\x68\x2A\x2A\x2A\x2A\xFF\x75\x08\xE8";
-static const size_t FileSystemFactory_symlen = sizeof( FileSystemFactory_sym ) - 1;
-
-#elif defined __linux
-
-static const char FileSystemFactory_sym[] = "@_Z17FileSystemFactoryPKcPi";
-static const size_t FileSystemFactory_symlen = 0;
-
-#elif defined __APPLE__
-
-static const char FileSystemFactory_sym[] = "@__Z17FileSystemFactoryPKcPi";
-static const size_t FileSystemFactory_symlen = 0;
-
-#endif
+static SourceSDK::ModuleLoader server_loader( "server" );
 
 #elif defined FILESYSTEM_CLIENT
 
 static SourceSDK::FactoryLoader filesystem_loader( "filesystem_stdio" );
+
+#endif
+
+struct Symbol
+{
+	std::string name;
+	size_t length;
+
+	Symbol( const std::string &nam, size_t len = 0 ) :
+		name( nam ), length( len ) { }
+
+	static Symbol FromSignature( const std::string &signature )
+	{
+		return Symbol( signature, signature.size( ) );
+	}
+
+	static Symbol FromName( const std::string &name )
+	{
+		return Symbol( "@" + name );
+	}
+};
+
+#if defined SYSTEM_WINDOWS
+
+static const std::vector<Symbol> FileSystemFactory_syms = {
+	Symbol::FromName( "?FileSystemFactory@@YAPEAXPEBDPEAH@Z" ),
+	Symbol::FromSignature( "\x55\x8B\xEC\x68\x2A\x2A\x2A\x2A\xFF\x75\x08\xE8" )
+};
+
+static const Symbol g_pFullFileSystem_sym = Symbol::FromName( "?g_pFullFileSystem@@3PEAVIFileSystem@@EA" );
+
+#elif defined SYSTEM_POSIX
+
+static const std::vector<Symbol> FileSystemFactory_syms = { Symbol::FromName( "_Z17FileSystemFactoryPKcPi" ) };
+
+static const Symbol g_pFullFileSystem_sym = Symbol::FromName( "g_pFullFileSystem" );
 
 #endif
 
@@ -130,7 +151,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 {
 	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::NIL )
 	{
-		std::unordered_map< std::string, std::set<std::string> > searchpaths = filesystem.GetSearchPaths( );
+		const std::unordered_map<std::string, std::set<std::string>> searchpaths = filesystem.GetSearchPaths( );
 
 		LUA->CreateTable( );
 		for( auto it = searchpaths.begin( ); it != searchpaths.end( ); ++it )
@@ -152,7 +173,7 @@ LUA_FUNCTION_STATIC( GetSearchPaths )
 	}
 	else
 	{
-		std::set<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
+		const std::set<std::string> searchpaths = filesystem.GetSearchPaths( LUA->CheckString( 1 ) );
 
 		LUA->CreateTable( );
 		size_t npaths = 0;
@@ -184,21 +205,51 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 
 #if defined FILESYSTEM_SERVER
 
-	SymbolFinder symfinder;
+	CBaseFileSystem *fsystem = nullptr;
+	{
+		SymbolFinder symfinder;
 
-	CreateInterfaceFn factory = reinterpret_cast<CreateInterfaceFn>( symfinder.Resolve(
-		dedicated_loader.GetModule( ), FileSystemFactory_sym, FileSystemFactory_symlen
-	) );
-	if( factory == nullptr )
-		LUA->ThrowError( "unable to retrieve dedicated factory" );
+		CreateInterfaceFn factory = nullptr;
+		for( const auto &symbol : FileSystemFactory_syms )
+		{
+			factory = reinterpret_cast<CreateInterfaceFn>( symfinder.Resolve(
+				dedicated_loader.GetModule( ),
+				symbol.name.c_str( ),
+				symbol.length
+			) );
+			if( factory != nullptr )
+				break;
+		}
 
-	IFileSystem *fsystem = static_cast<IFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
-	if( fsystem == nullptr )
-		LUA->ThrowError( "failed to initialize IFileSystem" );
+		if( factory == nullptr )
+		{
+			CBaseFileSystem **filesystem_ptr =
+				reinterpret_cast<CBaseFileSystem **>( symfinder.Resolve(
+					dedicated_loader.GetModule( ),
+					g_pFullFileSystem_sym.name.c_str( ),
+					g_pFullFileSystem_sym.length
+				) );
+			if( filesystem_ptr == nullptr )
+				filesystem_ptr =
+				reinterpret_cast<CBaseFileSystem **>( symfinder.Resolve(
+					server_loader.GetModule( ),
+					g_pFullFileSystem_sym.name.c_str( ),
+					g_pFullFileSystem_sym.length
+				) );
+
+			if( filesystem_ptr != nullptr )
+				fsystem = *filesystem_ptr;
+		}
+		else
+		{
+			fsystem =
+				static_cast<CBaseFileSystem *>( factory( FILESYSTEM_INTERFACE_VERSION, nullptr ) );
+		}
+	}
 
 #elif defined FILESYSTEM_CLIENT
 
-	IFileSystem *fsystem = filesystem_loader.GetInterface<IFileSystem>( FILESYSTEM_INTERFACE_VERSION );
+	CBaseFileSystem *fsystem = filesystem_loader.GetInterface<CBaseFileSystem>( FILESYSTEM_INTERFACE_VERSION );
 	if( fsystem == nullptr )
 		LUA->ThrowError( "unable to initialize IFileSystem" );
 

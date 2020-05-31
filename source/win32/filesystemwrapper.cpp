@@ -2,7 +2,8 @@
 #include "filevalve.hpp"
 #include "filestream.hpp"
 #include "unicode.hpp"
-#include "basefilesystem.hpp"
+
+#include <filesystem_base.h>
 
 #include <cstring>
 #include <cctype>

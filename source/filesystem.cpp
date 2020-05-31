@@ -250,10 +250,11 @@ void Initialize( GarrysMod::Lua::ILuaBase *LUA )
 #elif defined FILESYSTEM_CLIENT
 
 	CBaseFileSystem *fsystem = filesystem_loader.GetInterface<CBaseFileSystem>( FILESYSTEM_INTERFACE_VERSION );
-	if( fsystem == nullptr )
-		LUA->ThrowError( "unable to initialize IFileSystem" );
 
 #endif
+
+	if( fsystem == nullptr )
+		LUA->ThrowError( "unable to initialize IFileSystem" );
 
 	if( !filesystem.Initialize( fsystem ) )
 		LUA->ThrowError( "unable to initialize filesystem wrapper" );

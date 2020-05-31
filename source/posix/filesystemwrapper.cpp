@@ -1,6 +1,7 @@
 #include "filesystemwrapper.hpp"
 #include "filevalve.hpp"
-#include "basefilesystem.hpp"
+
+#include <filesystem_base.h>
 
 #include <cstring>
 #include <cctype>

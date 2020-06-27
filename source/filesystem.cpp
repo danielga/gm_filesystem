@@ -149,7 +149,7 @@ LUA_FUNCTION_STATIC( Find )
 
 LUA_FUNCTION_STATIC( GetSearchPaths )
 {
-	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::NIL )
+	if( LUA->GetType( 1 ) <= GarrysMod::Lua::Type::Nil )
 	{
 		const std::unordered_map<std::string, std::set<std::string>> searchpaths = filesystem.GetSearchPaths( );
 

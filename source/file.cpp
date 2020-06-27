@@ -13,7 +13,7 @@ namespace file
 {
 
 static const char *metaname = "FileHandle";
-static int32_t metatype = GarrysMod::Lua::Type::NONE;
+static int32_t metatype = GarrysMod::Lua::Type::None;
 static const char *invalid_error = "invalid FileHandle";
 
 struct Container
@@ -84,7 +84,7 @@ LUA_FUNCTION_STATIC( index )
 	LUA->GetMetaTable( 1 );
 	LUA->Push( 2 );
 	LUA->RawGet( -2 );
-	if( !LUA->IsType( -1, GarrysMod::Lua::Type::NIL ) )
+	if( !LUA->IsType( -1, GarrysMod::Lua::Type::Nil ) )
 		return 1;
 
 	LUA->Pop( 2 );
@@ -152,10 +152,10 @@ LUA_FUNCTION_STATIC( Tell )
 LUA_FUNCTION_STATIC( Seek )
 {
 	Base *file = Get( LUA, 1 );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	SeekDirection seektype = SeekBeg;
-	if( LUA->IsType( 3, GarrysMod::Lua::Type::NUMBER ) )
+	if( LUA->IsType( 3, GarrysMod::Lua::Type::Number ) )
 	{
 		uint32_t num = static_cast<uint32_t>( LUA->GetNumber( 3 ) );
 		if( num >= static_cast<uint32_t>( SeekBeg ) && num <= static_cast<uint32_t>( SeekEnd ) )
@@ -175,7 +175,7 @@ LUA_FUNCTION_STATIC( Flush )
 LUA_FUNCTION_STATIC( InvertBytes )
 {
 	CheckType( LUA, 1 );
-	LUA->CheckType( 1, GarrysMod::Lua::Type::BOOL );
+	LUA->CheckType( 1, GarrysMod::Lua::Type::Bool );
 	LUA->GetUserType<Container>( 1, metatype )->invert = LUA->GetBool( 2 );
 	return 0;
 }
@@ -183,7 +183,7 @@ LUA_FUNCTION_STATIC( InvertBytes )
 LUA_FUNCTION_STATIC( Read )
 {
 	Base *file = Get( LUA, 1 );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	double len = LUA->GetNumber( 2 );
 	if( len < 1.0 || len > 4294967295.0 )
@@ -227,7 +227,7 @@ LUA_FUNCTION_STATIC( ReadInt )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 2 ) );
 	switch( bits )
@@ -287,7 +287,7 @@ LUA_FUNCTION_STATIC( ReadUInt )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 2 ) );
 	switch( bits )
@@ -374,7 +374,7 @@ LUA_FUNCTION_STATIC( ReadDouble )
 LUA_FUNCTION_STATIC( Write )
 {
 	Base *file = Get( LUA, 1 );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::String );
 
 	size_t len = 0;
 	const char *str = LUA->GetString( 2, &len );
@@ -386,7 +386,7 @@ LUA_FUNCTION_STATIC( Write )
 LUA_FUNCTION_STATIC( WriteString )
 {
 	Base *file = Get( LUA, 1 );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::String );
 
 	size_t len = 0;
 	const char *str = LUA->GetString( 2, &len );
@@ -404,8 +404,8 @@ LUA_FUNCTION_STATIC( WriteInt )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
-	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
+	LUA->CheckType( 3, GarrysMod::Lua::Type::Number );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 3 ) );
 	switch( bits )
@@ -449,8 +449,8 @@ LUA_FUNCTION_STATIC( WriteUInt )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
-	LUA->CheckType( 3, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
+	LUA->CheckType( 3, GarrysMod::Lua::Type::Number );
 
 	size_t bits = static_cast<size_t>( LUA->GetNumber( 3 ) );
 	switch( bits )
@@ -494,7 +494,7 @@ LUA_FUNCTION_STATIC( WriteFloat )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	float num = InvertBytes( static_cast<float>( LUA->GetNumber( 2 ) ), invert );
 	LUA->PushBool( file->Write( &num, sizeof( num ) ) == sizeof( num ) );
@@ -505,7 +505,7 @@ LUA_FUNCTION_STATIC( WriteDouble )
 {
 	bool invert = false;
 	Base *file = Get( LUA, 1, &invert );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::NUMBER );
+	LUA->CheckType( 2, GarrysMod::Lua::Type::Number );
 
 	double num = InvertBytes( LUA->GetNumber( 2 ), invert );
 	LUA->PushBool( file->Write( &num, sizeof( num ) ) == sizeof( num ) );
